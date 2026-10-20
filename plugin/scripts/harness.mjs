@@ -85,6 +85,7 @@ function readLock() {
   safeRef(lock.checkedRef);
   Object.keys(lock.files).forEach(safeName);
   lock.pending.forEach(safeName);
+  Object.values(lock.contributing ?? {}).forEach((c) => c.files.forEach(safeName));
   return lock;
 }
 const writeLock = (lock) =>
@@ -226,9 +227,13 @@ const commands = {
     const changed = Object.entries(lock.files).filter(
       ([f, h]) => sha(read(join(DIR, f)) ?? '') !== h,
     );
+    const prOf = (f) =>
+      Object.values(lock.contributing ?? {}).find((c) => c.files.includes(f))?.pr ?? null;
+    const describe = ([f]) =>
+      `  ${f}${prOf(f) ? ` (PR 진행 중: ${prOf(f)})` : ' (아직 올리지 않음)'}`;
     console.log(
       changed.length
-        ? `프로젝트에서 고친 하네스 파일 (contribute로 원본에 올릴 수 있어요):\n${changed.map(([f]) => `  ${f}`).join('\n')}`
+        ? `프로젝트에서 고친 하네스 파일:\n${changed.map(describe).join('\n')}`
         : '프로젝트에서 고친 하네스 파일: 없음',
     );
     if (lock.pending.length)
@@ -285,7 +290,13 @@ const commands = {
         pending.push(f);
       }
     }
-    writeLock({ ...lock, ref: latest, pending });
+    // PR이 합쳐져 원본과 같아진 파일은 'PR 진행 중' 기록에서 지워요.
+    const contributing = Object.fromEntries(
+      Object.entries(lock.contributing ?? {}).filter(([, c]) =>
+        c.files.some((f) => sha(read(join(DIR, f)) ?? '') !== lock.files[f]),
+      ),
+    );
+    writeLock({ ...lock, ref: latest, pending, contributing });
     console.log(`\n✓ ${latest.slice(0, 7)}로 갱신했어요.`);
     if (pending.length)
       console.log(
@@ -369,6 +380,8 @@ const commands = {
     });
     git('checkout', '--quiet', '-B', branch, main);
     for (const f of files) write(join(CLONE, 'rules', f), read(join(DIR, f)));
+    // status가 이 파일을 'PR 진행 중'으로 보여 주게 기록해요. update로 원본과 같아지면 지워져요.
+    writeLock({ ...lock, contributing: { ...lock.contributing, [branch]: { files } } });
     console.log(`✓ 원본 clone에 ${branch} 브랜치를 만들고 ${files.join(', ')}를 옮겼어요.`);
     console.log(`  원본 clone: ${CLONE}`);
     console.log(
@@ -404,10 +417,17 @@ const commands = {
 
   'contribute-push'(title, bodyFile) {
     if (!title || !bodyFile) fail('사용법: contribute-push <PR 제목> <PR 본문 파일>');
+    const lock = needLock();
     const branch = git('branch', '--show-current');
+    const remember = (where) => {
+      if (lock.contributing?.[branch]) lock.contributing[branch].pr = where;
+      writeLock(lock);
+    };
     git('push', '--quiet', '-u', 'origin', branch);
-    if (!/github\.com/.test(git('remote', 'get-url', 'origin')))
+    if (!/github\.com/.test(git('remote', 'get-url', 'origin'))) {
+      remember(`브랜치 ${branch}`);
       return console.log(`✓ ${branch}를 push했어요(GitHub 원본이 아니라 PR은 만들지 않았어요).`);
+    }
     const pr = spawnSync(
       'gh',
       ['pr', 'create', '--title', title, '--body-file', bodyFile, '--head', branch],
@@ -417,6 +437,7 @@ const commands = {
       },
     );
     if (pr.status !== 0) fail(pr.stderr);
+    remember(pr.stdout.trim());
     console.log(`✓ PR을 만들었어요: ${pr.stdout.trim()}`);
   },
 };
