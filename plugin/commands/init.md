@@ -1,6 +1,6 @@
 ---
 description: 이 프로젝트에 최신 하네스 적용 (규칙 파일, 템플릿, 패키지, tsconfig 연결)
-allowed-tools: Bash(node:*), Bash(npm:*), Bash(npx:*), Bash(git:*), Bash(ls:*), Bash(cat:*), Bash(test:*), Bash(mv:*), Bash(mkdir:*), Read, Edit, Write
+allowed-tools: Bash(node:*), Bash(npm:*), Bash(npx:*), Bash(git:*), Bash(ls:*), Bash(cat:*), Bash(head:*), Bash(test:*), Bash(mv:*), Bash(mkdir:*), Read, Edit, Write
 ---
 
 이 프로젝트(Vite 또는 Next.js + React + TypeScript)에 sonic-harness를 적용해요.
