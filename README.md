@@ -40,6 +40,7 @@ _React + TypeScript 코딩 규칙을 글이 아니라 도구로 지키게 하는
 - **FSD 레이어 강제**: `app → pages → widgets → features → entities → shared` 방향만 허용하고, 다른 slice는 `index.ts`로만 가져오게 해요(`eslint-plugin-boundaries`).
 - **데이터 흐름 고정**: 조회는 `*.queries.ts`의 `queryOptions` 팩토리와 `useSuspenseQuery`, 변경은 `useMutation`, `entities/*/ui`는 props로만 데이터를 받아요. `fetch`는 `api/`에서만 써요.
 - **상태는 정해진 곳에**: URL 상태는 nuqs, 묶인 컴포넌트 내부만 Context, 여러 화면이 쓰는 클라이언트 상태만 Zustand(selector 필수). 위치와 사용법을 lint가 확인해요.
+- **테스트 기준**: 사용자 행동 중심 통합 테스트와 필수 케이스(정상·빈·에러, 성공·실패), 네트워크는 MSW만. 이름·찾는 방법·mock 금지를 lint가 확인해요.
 - **자동 수정 루프**: hook이 Claude의 모든 파일 수정 뒤에 format과 lint를 돌리고, 고치지 못한 에러를 다시 Claude에게 넘겨요.
 - **원본과 동기화**: `lock.json`이 받은 버전과 파일 해시를 기억해서, 원본의 변경과 프로젝트의 변경을 구분해 합쳐요.
 - **사람 코드도 같은 규칙**: 커밋 전 lint-staged(format + lint)와 CI(lint·typecheck·test·build)가 Claude hook과 같은 규칙으로 검사해요.

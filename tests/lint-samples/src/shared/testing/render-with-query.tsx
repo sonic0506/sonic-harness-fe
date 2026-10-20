@@ -1,0 +1,21 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render } from '@testing-library/react';
+import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
+import type { ReactNode } from 'react';
+
+type Options = {
+  // URL 상태(nuqs)의 시작 값. 예: { searchParams: '?page=2&q=kim' }
+  searchParams?: string;
+};
+
+// 테스트마다 새 QueryClient(retry 없음)와 URL 상태 adapter로 감싸요.
+export function renderWithQuery(ui: ReactNode, { searchParams }: Options = {}) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <NuqsTestingAdapter searchParams={searchParams ?? ''}>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </NuqsTestingAdapter>,
+  );
+}

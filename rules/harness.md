@@ -219,26 +219,61 @@ export function useUserDialog() {
 
 ## 7. 테스트
 
-| 종류          | 도구                     | 위치                   | 무엇을                                          |
-| ------------- | ------------------------ | ---------------------- | ----------------------------------------------- |
-| 단위·컴포넌트 | Vitest + Testing Library | 소스 옆 `*.test.ts(x)` | `lib` 순수 함수, hooks, ui                      |
-| API 연동      | MSW (`setupServer`)      | 같은 테스트 안         | 훅·화면이 성공, 빈 목록, 실패를 어떻게 그리는지 |
-| E2E           | Playwright               | `e2e/*.spec.ts`        | 핵심 흐름(로그인, 만들기)                       |
+사용자 행동을 기준으로 테스트해요. 적은 테스트로 실제 동작을 지키는 게 목표예요. coverage 수치는 정하지 않고, 대신 아래 **필수 케이스**를 지켜요.
 
-- 테스트는 사용자가 보는 것으로 확인해요: `getByRole`, `findByText`. 구현 세부(state, className)는 확인하지 않아요.
-- Suspense 화면은 `findBy…`로 기다려요. 렌더는 `@/shared/testing`의 `renderWithQuery`를 써요(테스트마다 새 `QueryClient`, `retry: false`).
+### 무엇을 테스트하나
+
+| 대상                             | 방식                                                                   | 필수 케이스                                                                           |
+| -------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 데이터 화면(page·widget)         | 통합: `renderWithQuery` + MSW                                          | 정상, 빈 목록, 서버 에러. URL 상태가 있으면 시작 값(`searchParams`)으로 불러오는 경우 |
+| 사용자 동작(feature UI)          | 통합                                                                   | 성공(결과가 화면에 반영), 실패(실패 문구). 폼이면 검증 실패                           |
+| 묶인 컴포넌트(Context)           | 통합                                                                   | 부품끼리의 동작(열기 → 확인 / 취소)                                                   |
+| `lib` 순수 함수                  | 단위                                                                   | 경계값                                                                                |
+| entities ui·hooks 단독           | 분기나 계산이 있을 때만                                                | —                                                                                     |
+| E2E(Playwright, `e2e/*.spec.ts`) | 로그인·결제처럼 막히면 서비스가 멈추는, 여러 화면을 건너는 핵심 흐름만 | 로컬에서 실행. CI는 첫 E2E가 생길 때 추가                                             |
+
+로딩 상태는 fallback이 보이는지만 확인해요. 구현 세부(state 값, className, 훅 호출 횟수)는 확인하지 않아요.
+
+### 어떻게 쓰나
+
+- 위치는 소스 옆 `*.test.ts(x)`예요. `describe('컴포넌트·함수 이름')`로 묶어요.
+- 이름은 **해요체 문장**이에요: `it('검색어가 있으면 그 결과만 보여 줘요')`. 테스트 하나는 동작 하나만 확인하고, 준비 → 행동 → 확인 순서로 써요.
+- 요소는 `screen.getByRole` → `getByLabelText` → `getByText` 순서로 찾아요. `getByTestId`, `container.querySelector`는 쓰지 않아요. 비동기는 `findBy…`로 기다려요.
+- 입력은 `userEvent.setup()`으로 해요. `fireEvent`는 쓰지 않아요.
+- **네트워크는 MSW로만** 바꿔요. 기본 응답은 `app/mocks/handlers.ts`, 경우별 응답은 테스트 안 `server.use(...)`예요. 프로젝트 모듈을 `vi.mock('@/…')`이나 `vi.mock('./…')`으로 바꾸지 않아요. 시간·브라우저 API 같은 외부만 `vi.useFakeTimers`, `vi.spyOn`을 써요.
+- 렌더는 `@/shared/testing`의 `renderWithQuery(ui, { searchParams })`를 써요(테스트마다 새 `QueryClient`, `retry: false`, URL 시작 값).
 - jest-dom 타입은 `shared/testing/jest-dom.d.ts`가 넣어요. tsconfig `types`를 고치지 않아요.
-- 데이터 화면은 정상·빈 목록·에러 세 경우를 테스트해요(로딩은 fallback이 보이는지만).
 
 ```tsx
-import { renderWithQuery, server } from '@/shared/testing';
+describe('UserListPage', () => {
+  it('사용자가 없으면 빈 상태를 보여 줘요', async () => {
+    server.use(http.get('/api/users', () => HttpResponse.json([])));
+    renderWithQuery(<UserListPage />);
+    expect(await screen.findByText('사용자가 없어요.')).toBeInTheDocument();
+  });
 
-it('사용자가 없으면 빈 상태를 보여 줘요', async () => {
-  server.use(http.get('/api/users', () => HttpResponse.json([])));
-  renderWithQuery(<UserListPage />);
-  expect(await screen.findByText('사용자가 없어요.')).toBeInTheDocument();
+  it('검색어를 입력하면 그 결과만 보여 줘요', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<UserListPage />, { searchParams: '?page=1' });
+    await user.type(
+      screen.getByRole('searchbox', { name: '사용자 검색' }),
+      'kim',
+    );
+    expect(await screen.findByText('김소닉')).toBeInTheDocument();
+  });
 });
 ```
+
+### lint가 막는 것 (`*.test.ts(x)`)
+
+| 규칙                                                                | 막는 것                                                                  |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `vitest/valid-title`                                                | 해요체 문장이 아닌 테스트 이름                                           |
+| `vitest/no-focused-tests`, `expect-expect`, `no-identical-title` 등 | `.only`, 확인 없는 테스트, 같은 이름                                     |
+| `testing-library/*` (react 권장)                                    | `container`·DOM 직접 접근, `screen` 없이 찾기, 기다리지 않는 비동기 쿼리 |
+| `testing-library/prefer-user-event`                                 | `fireEvent`                                                              |
+| `sonic/no-test-id`                                                  | `*ByTestId`                                                              |
+| `sonic/no-internal-mock`                                            | 프로젝트 모듈 `vi.mock`                                                  |
 
 ## 8. 커밋
 

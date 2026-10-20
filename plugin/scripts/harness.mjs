@@ -57,6 +57,8 @@ const DEV_DEPS = [
   'husky@9',
   'lint-staged@17',
   '@tanstack/eslint-plugin-query@5',
+  'eslint-plugin-testing-library@7',
+  '@vitest/eslint-plugin@1',
   'vitest',
   '@vitejs/plugin-react',
   'jsdom',

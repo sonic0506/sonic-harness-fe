@@ -62,10 +62,69 @@ const storeSelector = {
   },
 };
 
+// 테스트: 요소는 역할·라벨·글자로 찾아요. data-testid는 사용자가 보지 않는 값이라 쓰지 않아요.
+const noTestId = {
+  meta: {
+    type: 'problem',
+    messages: {
+      testId:
+        '{{name}}는 쓰지 않아요. getByRole → getByLabelText → getByText 순서로, 사용자가 보는 것으로 찾아요.',
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      CallExpression(node) {
+        const { callee } = node;
+        const name =
+          callee.type === 'MemberExpression'
+            ? callee.property.name
+            : callee.name;
+        if (/^(get|query|find)(All)?ByTestId$/.test(name ?? ''))
+          context.report({ node, messageId: 'testId', data: { name } });
+      },
+    };
+  },
+};
+
+// 테스트: 프로젝트 모듈을 vi.mock으로 바꾸지 않아요. 서버 응답은 MSW(server.use)로 바꿔요.
+const noInternalMock = {
+  meta: {
+    type: 'problem',
+    messages: {
+      internal:
+        "프로젝트 모듈('{{path}}')을 vi.mock으로 바꾸지 않아요. 서버 응답은 server.use(http.get(...))로 바꾸고, 나머지는 실제 코드로 테스트해요.",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      CallExpression(node) {
+        const { callee } = node;
+        const [first] = node.arguments;
+        if (
+          callee.type === 'MemberExpression' &&
+          callee.object.name === 'vi' &&
+          ['mock', 'doMock'].includes(callee.property.name) &&
+          first?.type === 'Literal' &&
+          /^(@\/|\.)/.test(first.value)
+        )
+          context.report({
+            node,
+            messageId: 'internal',
+            data: { path: first.value },
+          });
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: 'sonic' },
   rules: {
     'no-context-export': noContextExport,
     'store-selector': storeSelector,
+    'no-test-id': noTestId,
+    'no-internal-mock': noInternalMock,
   },
 };

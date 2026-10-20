@@ -7,11 +7,17 @@ import boundaries from 'eslint-plugin-boundaries';
 import checkFile from 'eslint-plugin-check-file';
 import globals from 'globals';
 import pluginQuery from '@tanstack/eslint-plugin-query';
+import testingLibrary from 'eslint-plugin-testing-library';
+import vitest from '@vitest/eslint-plugin';
 import sonic from './eslint-plugin-sonic.mjs';
 // sonic-ui 디자인 규칙(eslint-design-rules)이 no-restricted-syntax를 쓰므로 하네스는 그 규칙을 쓰지 않아요
 // (flat config는 같은 규칙을 덮어써요).
 
 const SRC = 'src/**/*.{ts,tsx}';
+const TEST = 'src/**/*.test.{ts,tsx}';
+// 테스트 이름은 해요체 문장이에요: it('검색어가 있으면 그 결과만 보여 줘요')
+const TITLE = '요[.!?]?$';
+const TITLE_MESSAGE = "테스트 이름은 '~하면 ~해요'처럼 해요체 문장으로 써요.";
 
 // 레이어 순서: 위 레이어는 아래 레이어만 가져올 수 있어요.
 const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared'];
@@ -268,6 +274,28 @@ export default tseslint.config(
     rules: {
       'sonic/no-context-export': 'error',
       'sonic/store-selector': 'error',
+    },
+  },
+
+  // 테스트 파일: 사용자 행동 중심 테스트(harness.md 7절)
+  { files: [TEST], ...testingLibrary.configs['flat/react'] },
+  {
+    files: [TEST],
+    plugins: { vitest },
+    rules: {
+      ...vitest.configs.recommended.rules,
+      'vitest/valid-title': [
+        'error',
+        {
+          mustMatch: {
+            it: [TITLE, TITLE_MESSAGE],
+            test: [TITLE, TITLE_MESSAGE],
+          },
+        },
+      ],
+      'testing-library/prefer-user-event': 'error',
+      'sonic/no-test-id': 'error',
+      'sonic/no-internal-mock': 'error',
     },
   },
 );
