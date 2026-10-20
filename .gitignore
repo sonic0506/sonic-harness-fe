@@ -1,0 +1,4 @@
+node_modules
+sandbox
+evals/results/*.jsonl
+evals/results/*.log

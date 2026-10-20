@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "sonic-harness",
+  "description": "sonic0506의 React + TypeScript 코딩 하네스",
+  "owner": {
+    "name": "sonic0506",
+    "url": "https://github.com/sonic0506"
+  },
+  "plugins": [
+    {
+      "name": "sonic-harness",
+      "description": "FSD 레이어 규칙, 파일 수정 후 format·lint hook, 규칙 문서. init·status·update·check·contribute 명령",
+      "source": "./plugin",
+      "category": "development"
+    }
+  ]
+}
