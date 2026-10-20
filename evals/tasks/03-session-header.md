@@ -6,5 +6,5 @@
 - 로그인 정보는 앱 어디서나 읽을 수 있어야 해요.
 - 실제 서버는 없어요. MSW handler로 응답을 만들어요.
 - `src/app/app.tsx`에서 헤더를 보여 주세요(라우터는 넣지 않아요).
-- 로그인, 로그아웃, 로그인 실패 테스트를 써 주세요.
+- 테스트는 하네스 기준(`.sonic-harness/harness.md` 7절의 필수 케이스)대로 써 주세요.
 - 끝나면 `npm run lint`, `npm run typecheck`, `npm test`를 실행해서 통과시켜 주세요.
