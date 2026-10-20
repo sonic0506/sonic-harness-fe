@@ -56,6 +56,7 @@ const DEV_DEPS = [
   '@commitlint/config-conventional@21',
   'husky@9',
   'lint-staged@17',
+  '@tanstack/eslint-plugin-query@5',
   'vitest',
   '@vitejs/plugin-react',
   'jsdom',
@@ -174,6 +175,15 @@ const templatesAt = (ref, kind) => {
     map.set(p, `templates.${kind}/${p}`);
   return map;
 };
+
+// 하네스가 쓰는 패키지 중 package.json에 없는 것. 규칙이 새 ESLint 플러그인을 쓰게 되면 update가 알려 줘요.
+function missingPackages() {
+  const pkg = JSON.parse(read(join(PROJECT, 'package.json')) ?? '{}');
+  const all = { ...pkg.dependencies, ...pkg.devDependencies };
+  const name = (spec) => spec.replace(/(.)@[^@/]+$/, '$1'); // '@a/b@5' → '@a/b', 'typescript@~6.0' → 'typescript'
+  const missing = (list) => list.filter((spec) => !(name(spec) in all));
+  return { dev: missing(DEV_DEPS), prod: missing(DEPS) };
+}
 
 function projectKind() {
   const text =
@@ -373,6 +383,11 @@ const commands = {
     if (newTemplates.length)
       console.log(
         `새 템플릿 (프로젝트에 없음, 고르면 add-templates로 복사해요):\n${newTemplates.map((p) => `  ${p}`).join('\n')}`,
+      );
+    const { dev, prod } = missingPackages();
+    if (dev.length || prod.length)
+      console.log(
+        `하네스가 쓰는데 프로젝트에 없는 패키지 (적용 뒤 설치해요):\n${[dev.length && `  npm i -D ${dev.join(' ')}`, prod.length && `  npm i ${prod.join(' ')}`].filter(Boolean).join('\n')}`,
       );
     const log = newCommits(lock.ref, latest);
     if (log) console.log(`변경 기록:\n${log.replace(/^/gm, '  ')}`);

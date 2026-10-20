@@ -15,6 +15,7 @@ allowed-tools: Bash(node:*), Bash(npm:*), Read, Edit, Write
    - 합치는 중인 파일이 있다는 에러면 5번(합치기)부터 이어서 해요.
 2. 변경 기록을 보고 어떤 규칙이 바뀌는지 한두 줄로 설명하고, **적용할지 사용자 확인을 받아요**.
 3. `harness.mjs update --apply`를 실행해요.
+   - 계획에 "프로젝트에 없는 패키지"가 있으면 적용 뒤 그 명령(`npm i -D …`, `npm i …`)을 그대로 실행해요. 새 규칙이 쓰는 ESLint 플러그인이라 설치하지 않으면 lint가 깨져요.
    - 계획에 "새 템플릿"이 있으면 무엇을 하는 파일인지 한 줄씩 설명하고, **어떤 것을 추가할지 물어요**. 고른 것만 `harness.mjs add-templates <경로...>`로 복사해요. 고르지 않은 템플릿은 다음 update에서 다시 묻지 않아요.
    - `.husky/pre-commit`이나 `lint-staged.config.mjs`를 추가했으면 `npm i -D lint-staged@17`을 실행해요. `.github/workflows/ci.yml`을 추가했으면 `package.json`에 `build` 스크립트가 있는지 확인해요.
    - `src/app/providers/url-state-adapter.tsx`를 추가했으면 `npm i nuqs@2`를 실행하고, `app-providers.tsx`에서 `UrlStateAdapter`로 children을 감싸요. `shared/testing/render-with-query.tsx`도 `NuqsTestingAdapter`로 감싸도록 고쳐요(templates의 같은 파일 참고).
