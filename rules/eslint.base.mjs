@@ -34,7 +34,15 @@ const PROPS_ONLY =
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'build', '.next', 'coverage', 'playwright-report', 'next-env.d.ts'],
+    ignores: [
+      'dist',
+      'build',
+      'storybook-static',
+      '.next',
+      'coverage',
+      'playwright-report',
+      'next-env.d.ts',
+    ],
   },
   js.configs.recommended,
   tseslint.configs.recommended,
