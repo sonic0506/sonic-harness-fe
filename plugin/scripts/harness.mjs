@@ -17,14 +17,22 @@
 // 환경 변수: SONIC_HARNESS_ORIGIN(원본 git URL), SONIC_HARNESS_HOME(원본 clone을 둘 폴더)
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ORIGIN =
-  process.env.SONIC_HARNESS_ORIGIN ?? 'https://github.com/sonic0506/sonic-harness-fe.git';
-const HOME = process.env.SONIC_HARNESS_HOME ?? join(homedir(), '.sonic-harness');
+  process.env.SONIC_HARNESS_ORIGIN ??
+  'https://github.com/sonic0506/sonic-harness-fe.git';
+const HOME =
+  process.env.SONIC_HARNESS_HOME ?? join(homedir(), '.sonic-harness');
 const CLONE = join(HOME, 'origin');
 const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PROJECT = process.cwd();
@@ -59,7 +67,8 @@ const DEV_DEPS = [
 const DEPS = ['@tanstack/react-query', 'zustand', 'react-error-boundary'];
 
 // ---------- 작은 도구 ----------
-const git = (...args) => execFileSync('git', ['-C', CLONE, ...args], { encoding: 'utf8' }).trim();
+const git = (...args) =>
+  execFileSync('git', ['-C', CLONE, ...args], { encoding: 'utf8' }).trim();
 const sha = (text) => createHash('sha256').update(text).digest('hex');
 const fail = (msg) => {
   console.error(`✗ ${msg}`);
@@ -77,7 +86,9 @@ const safeName = (f) =>
     ? f
     : fail(`하네스 파일 이름이 올바르지 않아요: ${f}`);
 const safeRef = (ref) =>
-  /^[0-9a-f]{40}$/.test(ref) ? ref : fail(`lock.json의 버전이 올바르지 않아요: ${ref}`);
+  /^[0-9a-f]{40}$/.test(ref)
+    ? ref
+    : fail(`lock.json의 버전이 올바르지 않아요: ${ref}`);
 function readLock() {
   if (!existsSync(LOCK)) return null;
   const lock = JSON.parse(readFileSync(LOCK, 'utf8'));
@@ -85,7 +96,9 @@ function readLock() {
   safeRef(lock.checkedRef);
   Object.keys(lock.files).forEach(safeName);
   lock.pending.forEach(safeName);
-  Object.values(lock.contributing ?? {}).forEach((c) => c.files.forEach(safeName));
+  Object.values(lock.contributing ?? {}).forEach((c) =>
+    c.files.forEach(safeName),
+  );
   return lock;
 }
 const writeLock = (lock) =>
@@ -94,20 +107,26 @@ const writeLock = (lock) =>
     `${JSON.stringify({ ...lock, updatedAt: new Date().toISOString() }, null, 2)}\n`,
   );
 const needLock = () =>
-  readLock() ?? fail('이 프로젝트에 하네스가 없어요. /sonic-harness:init을 먼저 실행하세요.');
+  readLock() ??
+  fail('이 프로젝트에 하네스가 없어요. /sonic-harness:init을 먼저 실행하세요.');
 
 // 원본 clone을 만들거나 최신으로 받아요. 반환: 원본 기본 브랜치의 최신 커밋
 function syncOrigin() {
   if (!existsSync(join(CLONE, '.git'))) {
     mkdirSync(HOME, { recursive: true });
-    execFileSync('git', ['clone', '--quiet', ORIGIN, CLONE], { stdio: 'inherit' });
+    execFileSync('git', ['clone', '--quiet', ORIGIN, CLONE], {
+      stdio: 'inherit',
+    });
   } else {
     git('fetch', '--quiet', 'origin');
   }
   return safeRef(git('rev-parse', `origin/${defaultBranch()}`));
 }
 const defaultBranch = () =>
-  git('symbolic-ref', '--short', 'refs/remotes/origin/HEAD').replace('origin/', '');
+  git('symbolic-ref', '--short', 'refs/remotes/origin/HEAD').replace(
+    'origin/',
+    '',
+  );
 const listAt = (ref, dir) =>
   git('ls-tree', '-r', '--name-only', ref, `${dir}/`)
     .split('\n')
@@ -138,13 +157,18 @@ function projectKind() {
   const all = { ...pkg.dependencies, ...pkg.devDependencies };
   if (all.next) return 'next';
   if (all.vite) return 'vite';
-  return fail('Vite나 Next.js 프로젝트가 아니에요(package.json에 vite나 next가 없어요).');
+  return fail(
+    'Vite나 Next.js 프로젝트가 아니에요(package.json에 vite나 next가 없어요).',
+  );
 }
 
 // ---------- 명령 ----------
 const commands = {
   init() {
-    if (readLock()) fail('이미 하네스가 있어요. 최신으로 받으려면 /sonic-harness:update를 쓰세요.');
+    if (readLock())
+      fail(
+        '이미 하네스가 있어요. 최신으로 받으려면 /sonic-harness:update를 쓰세요.',
+      );
     const kind = projectKind();
     const ref = syncOrigin();
     const files = {};
@@ -165,18 +189,30 @@ const commands = {
       copied.push(f);
     }
     // tsconfig에 strict 묶음 연결
-    const ts = join(PROJECT, kind === 'vite' ? 'tsconfig.app.json' : 'tsconfig.json');
+    const ts = join(
+      PROJECT,
+      kind === 'vite' ? 'tsconfig.app.json' : 'tsconfig.json',
+    );
     const tsText = read(ts) ?? fail(`${ts}가 없어요.`);
     if (!tsText.includes('.sonic-harness/tsconfig.strict.json'))
       writeFileSync(
         ts,
-        tsText.replace('{', '{\n  "extends": "./.sonic-harness/tsconfig.strict.json",'),
+        tsText.replace(
+          '{',
+          '{\n  "extends": "./.sonic-harness/tsconfig.strict.json",',
+        ),
       );
     if (kind === 'next') {
       write(join(PROJECT, 'pages/.gitkeep'), ''); // src/pages를 Pages Router로 읽지 않게
       const claude = read(join(PROJECT, 'CLAUDE.md')) ?? '';
-      if (existsSync(join(PROJECT, 'AGENTS.md')) && !claude.includes('@AGENTS.md'))
-        writeFileSync(join(PROJECT, 'CLAUDE.md'), `${claude.trimEnd()}\n@AGENTS.md\n`);
+      if (
+        existsSync(join(PROJECT, 'AGENTS.md')) &&
+        !claude.includes('@AGENTS.md')
+      )
+        writeFileSync(
+          join(PROJECT, 'CLAUDE.md'),
+          `${claude.trimEnd()}\n@AGENTS.md\n`,
+        );
     }
     writeLock({ origin: ORIGIN, ref, checkedRef: ref, files, pending: [] });
     console.log(`✓ 하네스 ${ref.slice(0, 7)}를 적용했어요 (${kind}).`);
@@ -193,7 +229,10 @@ const commands = {
     };
     npm('i', '-D', ...DEV_DEPS);
     npm('i', ...DEPS);
-    spawnSync('npx', ['msw', 'init', 'public', '--save'], { cwd: PROJECT, stdio: 'ignore' });
+    spawnSync('npx', ['msw', 'init', 'public', '--save'], {
+      cwd: PROJECT,
+      stdio: 'ignore',
+    });
     npm(
       'pkg',
       'set',
@@ -228,7 +267,8 @@ const commands = {
       ([f, h]) => sha(read(join(DIR, f)) ?? '') !== h,
     );
     const prOf = (f) =>
-      Object.values(lock.contributing ?? {}).find((c) => c.files.includes(f))?.pr ?? null;
+      Object.values(lock.contributing ?? {}).find((c) => c.files.includes(f))
+        ?.pr ?? null;
     const describe = ([f]) =>
       `  ${f}${prOf(f) ? ` (PR 진행 중: ${prOf(f)})` : ' (아직 올리지 않음)'}`;
     console.log(
@@ -237,11 +277,19 @@ const commands = {
         : '프로젝트에서 고친 하네스 파일: 없음',
     );
     if (lock.pending.length)
-      console.log(`합치는 중인 파일: ${lock.pending.join(', ')} (resolve 필요)`);
+      console.log(
+        `합치는 중인 파일: ${lock.pending.join(', ')} (resolve 필요)`,
+      );
     if (lock.checkedRef !== lock.ref)
-      console.log('받았지만 아직 점검하지 않은 규칙 변경이 있어요 (/sonic-harness:check).');
-    const here = JSON.parse(read(join(PLUGIN_ROOT, '.claude-plugin/plugin.json')) ?? '{}').version;
-    const there = JSON.parse(showAt(latest, 'plugin/.claude-plugin/plugin.json') ?? '{}').version;
+      console.log(
+        '받았지만 아직 점검하지 않은 규칙 변경이 있어요 (/sonic-harness:check).',
+      );
+    const here = JSON.parse(
+      read(join(PLUGIN_ROOT, '.claude-plugin/plugin.json')) ?? '{}',
+    ).version;
+    const there = JSON.parse(
+      showAt(latest, 'plugin/.claude-plugin/plugin.json') ?? '{}',
+    ).version;
     console.log(
       `플러그인: ${here ?? '?'}${there && there !== here ? ` → ${there} 있음 (/plugin에서 sonic-harness 업데이트)` : ' (최신)'}`,
     );
@@ -250,18 +298,26 @@ const commands = {
   update(flag) {
     const lock = needLock();
     if (lock.pending.length)
-      fail(`합치는 중인 파일이 있어요: ${lock.pending.join(', ')}. 먼저 resolve하세요.`);
+      fail(
+        `합치는 중인 파일이 있어요: ${lock.pending.join(', ')}. 먼저 resolve하세요.`,
+      );
     const latest = syncOrigin();
     const plan = [];
-    for (const f of new Set([...managedAt(latest), ...Object.keys(lock.files)])) {
+    for (const f of new Set([
+      ...managedAt(latest),
+      ...Object.keys(lock.files),
+    ])) {
       const incoming = showAt(latest, `rules/${f}`);
       const local = read(join(DIR, f));
       const base = lock.files[f];
       if (incoming === null) plan.push({ f, action: 'removed-upstream' });
-      else if (base === undefined) plan.push({ f, action: local === null ? 'add' : 'conflict' });
+      else if (base === undefined)
+        plan.push({ f, action: local === null ? 'add' : 'conflict' });
       else if (sha(incoming) === base) plan.push({ f, action: 'up-to-date' });
-      else if (local !== null && sha(local) === sha(incoming)) plan.push({ f, action: 'same' });
-      else if (local === null || sha(local) === base) plan.push({ f, action: 'overwrite' });
+      else if (local !== null && sha(local) === sha(incoming))
+        plan.push({ f, action: 'same' });
+      else if (local === null || sha(local) === base)
+        plan.push({ f, action: 'overwrite' });
       else plan.push({ f, action: 'conflict' });
     }
     const label = {
@@ -276,7 +332,8 @@ const commands = {
     for (const { f, action } of plan) console.log(`  ${label[action]}: ${f}`);
     const log = newCommits(lock.ref, latest);
     if (log) console.log(`변경 기록:\n${log.replace(/^/gm, '  ')}`);
-    if (flag !== '--apply') return console.log('\n(계획만 보여 줬어요. 적용하려면 --apply)');
+    if (flag !== '--apply')
+      return console.log('\n(계획만 보여 줬어요. 적용하려면 --apply)');
 
     const pending = [];
     for (const { f, action } of plan) {
@@ -308,7 +365,9 @@ const commands = {
     safeName(f ?? '');
     const lock = needLock();
     if (!lock.pending.includes(f))
-      fail(`${f}는 합치는 중인 파일이 아니에요. 대기 중: ${lock.pending.join(', ') || '없음'}`);
+      fail(
+        `${f}는 합치는 중인 파일이 아니에요. 대기 중: ${lock.pending.join(', ') || '없음'}`,
+      );
     // 기준은 새 원본이에요. 프로젝트에 남긴 차이는 '프로젝트에서 고친 파일'로 보여요.
     lock.files[f] = sha(read(join(DIR, `${f}.incoming`)));
     unlinkSync(join(DIR, `${f}.incoming`));
@@ -324,9 +383,12 @@ const commands = {
   'check-diff'() {
     const lock = needLock();
     syncOrigin();
-    if (lock.checkedRef === lock.ref) return console.log('마지막 점검 뒤 받은 규칙 변경이 없어요.');
+    if (lock.checkedRef === lock.ref)
+      return console.log('마지막 점검 뒤 받은 규칙 변경이 없어요.');
     const range = `${lock.checkedRef}..${lock.ref}`;
-    console.log(`점검할 규칙 변경: ${lock.checkedRef.slice(0, 7)} → ${lock.ref.slice(0, 7)}\n`);
+    console.log(
+      `점검할 규칙 변경: ${lock.checkedRef.slice(0, 7)} → ${lock.ref.slice(0, 7)}\n`,
+    );
     console.log(git('log', '--format=- %s', range, '--', 'rules'));
     console.log(git('diff', range, '--', 'rules'));
   },
@@ -349,40 +411,63 @@ const commands = {
       const base = showAt(lock.ref, `rules/${f}`) ?? '';
       const tmp = join(HOME, 'tmp', f);
       write(tmp, base);
-      const r = spawnSync('git', ['diff', '--no-index', '--no-color', tmp, local], {
-        encoding: 'utf8',
-      });
-      console.log(r.stdout.replaceAll(tmp, `/원본/${f}`).replaceAll(local, `/프로젝트/${f}`));
+      const r = spawnSync(
+        'git',
+        ['diff', '--no-index', '--no-color', tmp, local],
+        {
+          encoding: 'utf8',
+        },
+      );
+      console.log(
+        r.stdout
+          .replaceAll(tmp, `/원본/${f}`)
+          .replaceAll(local, `/프로젝트/${f}`),
+      );
       if (showAt(main, `rules/${f}`) !== base)
-        console.log(`⚠ ${f}는 원본에서도 바뀌었어요. 먼저 /sonic-harness:update로 받으세요.\n`);
+        console.log(
+          `⚠ ${f}는 원본에서도 바뀌었어요. 먼저 /sonic-harness:update로 받으세요.\n`,
+        );
     }
     if (!found) console.log('프로젝트에서 고친 하네스 파일이 없어요.');
   },
 
   'contribute-start'(branch, ...files) {
     const lock = needLock();
-    if (!branch || !files.length) fail('사용법: contribute-start <브랜치> <파일...>');
+    if (!branch || !files.length)
+      fail('사용법: contribute-start <브랜치> <파일...>');
     if (!/^[A-Za-z0-9._/-]+$/.test(branch) || branch.startsWith('-'))
       fail(`브랜치 이름이 올바르지 않아요: ${branch}`);
     files.forEach(safeName);
     syncOrigin();
     const main = `origin/${defaultBranch()}`;
-    if (git('status', '--porcelain')) fail(`원본 clone(${CLONE})에 커밋하지 않은 변경이 있어요.`);
+    if (git('status', '--porcelain'))
+      fail(`원본 clone(${CLONE})에 커밋하지 않은 변경이 있어요.`);
     for (const f of files) {
       if (!(f in lock.files)) fail(`${f}는 하네스 파일이 아니에요.`);
       if (showAt(main, `rules/${f}`) !== showAt(lock.ref, `rules/${f}`))
-        fail(`${f}는 원본에서도 바뀌었어요. /sonic-harness:update로 먼저 받으세요.`);
+        fail(
+          `${f}는 원본에서도 바뀌었어요. /sonic-harness:update로 먼저 받으세요.`,
+        );
     }
     // 프로젝트 파일을 먼저 같은 Prettier 설정으로 맞춰요. 그래야 PR이 합쳐진 뒤 update에서 '이미 같음'이 돼요.
-    spawnSync('npx', ['prettier', '--write', ...files.map((f) => join(DIR, f))], {
-      cwd: PROJECT,
-      stdio: 'ignore',
-    });
+    spawnSync(
+      'npx',
+      ['prettier', '--write', ...files.map((f) => join(DIR, f))],
+      {
+        cwd: PROJECT,
+        stdio: 'ignore',
+      },
+    );
     git('checkout', '--quiet', '-B', branch, main);
     for (const f of files) write(join(CLONE, 'rules', f), read(join(DIR, f)));
     // status가 이 파일을 'PR 진행 중'으로 보여 주게 기록해요. update로 원본과 같아지면 지워져요.
-    writeLock({ ...lock, contributing: { ...lock.contributing, [branch]: { files } } });
-    console.log(`✓ 원본 clone에 ${branch} 브랜치를 만들고 ${files.join(', ')}를 옮겼어요.`);
+    writeLock({
+      ...lock,
+      contributing: { ...lock.contributing, [branch]: { files } },
+    });
+    console.log(
+      `✓ 원본 clone에 ${branch} 브랜치를 만들고 ${files.join(', ')}를 옮겼어요.`,
+    );
     console.log(`  원본 clone: ${CLONE}`);
     console.log(
       '  lint 규칙을 바꿨다면 tests/lint-samples에 bad/good 샘플을, rules/CHANGELOG.md에 한 줄을 추가하세요.',
@@ -398,9 +483,16 @@ const commands = {
       cwd: CLONE,
       stdio: 'ignore',
     });
-    const lint = spawnSync('npx', ['eslint', '.'], { cwd: CLONE, encoding: 'utf8' });
-    if (lint.status !== 0) fail(`원본 저장소 lint가 실패했어요.\n${lint.stdout}`);
-    const test = spawnSync('npm', ['run', 'test:lint'], { cwd: CLONE, encoding: 'utf8' });
+    const lint = spawnSync('npx', ['eslint', '.'], {
+      cwd: CLONE,
+      encoding: 'utf8',
+    });
+    if (lint.status !== 0)
+      fail(`원본 저장소 lint가 실패했어요.\n${lint.stdout}`);
+    const test = spawnSync('npm', ['run', 'test:lint'], {
+      cwd: CLONE,
+      encoding: 'utf8',
+    });
     console.log(
       test.stdout
         .split('\n')
@@ -408,7 +500,9 @@ const commands = {
         .join('\n'),
     );
     if (test.status !== 0)
-      fail('lint 샘플 테스트가 실패했어요. 원본 clone에서 고친 뒤 다시 실행하세요.');
+      fail(
+        'lint 샘플 테스트가 실패했어요. 원본 clone에서 고친 뒤 다시 실행하세요.',
+      );
     git('add', '-A');
     git('commit', '--quiet', '-m', message);
     console.log(`✓ 커밋했어요: ${git('log', '--oneline', '-1')}`);
@@ -416,7 +510,8 @@ const commands = {
   },
 
   'contribute-push'(title, bodyFile) {
-    if (!title || !bodyFile) fail('사용법: contribute-push <PR 제목> <PR 본문 파일>');
+    if (!title || !bodyFile)
+      fail('사용법: contribute-push <PR 제목> <PR 본문 파일>');
     const lock = needLock();
     const branch = git('branch', '--show-current');
     const remember = (where) => {
@@ -426,11 +521,22 @@ const commands = {
     git('push', '--quiet', '-u', 'origin', branch);
     if (!/github\.com/.test(git('remote', 'get-url', 'origin'))) {
       remember(`브랜치 ${branch}`);
-      return console.log(`✓ ${branch}를 push했어요(GitHub 원본이 아니라 PR은 만들지 않았어요).`);
+      return console.log(
+        `✓ ${branch}를 push했어요(GitHub 원본이 아니라 PR은 만들지 않았어요).`,
+      );
     }
     const pr = spawnSync(
       'gh',
-      ['pr', 'create', '--title', title, '--body-file', bodyFile, '--head', branch],
+      [
+        'pr',
+        'create',
+        '--title',
+        title,
+        '--body-file',
+        bodyFile,
+        '--head',
+        branch,
+      ],
       {
         cwd: CLONE,
         encoding: 'utf8',
@@ -443,4 +549,6 @@ const commands = {
 };
 
 const [cmd, ...args] = process.argv.slice(2);
-(commands[cmd] ?? (() => fail(`명령: ${Object.keys(commands).join(', ')}`)))(...args);
+(commands[cmd] ?? (() => fail(`명령: ${Object.keys(commands).join(', ')}`)))(
+  ...args,
+);

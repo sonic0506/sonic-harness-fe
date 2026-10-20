@@ -20,7 +20,8 @@ const RESTRICTED_PATHS = [
   {
     name: '@tanstack/react-query',
     importNames: ['useQuery', 'useQueries'],
-    message: '조회는 useSuspenseQuery를 써요. 로딩·에러는 Suspense와 ErrorBoundary가 맡아요.',
+    message:
+      '조회는 useSuspenseQuery를 써요. 로딩·에러는 Suspense와 ErrorBoundary가 맡아요.',
   },
   { name: 'axios', message: 'HTTP는 shared/api의 http 클라이언트를 써요.' },
 ];
@@ -34,7 +35,14 @@ const PROPS_ONLY =
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'build', '.next', 'coverage', 'playwright-report', 'next-env.d.ts'],
+    ignores: [
+      'dist',
+      'build',
+      '.next',
+      'coverage',
+      'playwright-report',
+      'next-env.d.ts',
+    ],
   },
   js.configs.recommended,
   tseslint.configs.recommended,
@@ -57,13 +65,24 @@ export default tseslint.config(
         { 'src/**/*.{ts,tsx}': 'KEBAB_CASE' },
         { ignoreMiddleExtensions: true },
       ],
-      'check-file/folder-naming-convention': ['error', { 'src/**/': 'KEBAB_CASE' }],
+      'check-file/folder-naming-convention': [
+        'error',
+        { 'src/**/': 'KEBAB_CASE' },
+      ],
       '@typescript-eslint/naming-convention': [
         'error',
         { selector: 'typeLike', format: ['PascalCase'] },
-        { selector: 'variable', format: ['camelCase', 'UPPER_CASE', 'PascalCase'] },
+        {
+          selector: 'variable',
+          format: ['camelCase', 'UPPER_CASE', 'PascalCase'],
+        },
         // 라이브러리가 정한 이름을 꺼내 쓰는 경우는 검사하지 않아요.
-        { selector: 'variable', types: ['boolean'], modifiers: ['destructured'], format: null },
+        {
+          selector: 'variable',
+          types: ['boolean'],
+          modifiers: ['destructured'],
+          format: null,
+        },
         {
           selector: 'variable',
           types: ['boolean'],
@@ -82,7 +101,9 @@ export default tseslint.config(
     settings: {
       'import/resolver': { typescript: { alwaysTryTypes: true } },
       // 진입 파일(src/main.tsx 등)은 레이어 밖이라 검사하지 않아요. main.tsx는 @/app만 불러요.
-      'boundaries/include': ['src/{app,pages,widgets,features,entities,shared}/**/*'],
+      'boundaries/include': [
+        'src/{app,pages,widgets,features,entities,shared}/**/*',
+      ],
       'boundaries/elements': [
         { type: 'app', pattern: 'src/app' },
         { type: 'pages', pattern: 'src/pages/*', capture: ['slice'] },
@@ -114,7 +135,9 @@ export default tseslint.config(
               allow: {
                 to: {
                   element: {
-                    types: { anyOf: below(layer).filter((t) => t !== 'shared') },
+                    types: {
+                      anyOf: below(layer).filter((t) => t !== 'shared'),
+                    },
                     fileInternalPath: 'index.{ts,tsx}',
                   },
                 },
@@ -123,7 +146,14 @@ export default tseslint.config(
             // shared는 segment마다 index.ts (shared/ui/index.ts, shared/api/index.ts …)
             {
               from: { element: { types: { anyOf: LAYERS.slice(0, -1) } } },
-              allow: { to: { element: { type: 'shared', fileInternalPath: '*/index.{ts,tsx}' } } },
+              allow: {
+                to: {
+                  element: {
+                    type: 'shared',
+                    fileInternalPath: '*/index.{ts,tsx}',
+                  },
+                },
+              },
             },
           ],
         },
@@ -135,12 +165,16 @@ export default tseslint.config(
   {
     files: [SRC],
     rules: {
-      'no-restricted-imports': ['error', { paths: [...RESTRICTED_PATHS, ZUSTAND] }],
+      'no-restricted-imports': [
+        'error',
+        { paths: [...RESTRICTED_PATHS, ZUSTAND] },
+      ],
       'no-restricted-globals': [
         'error',
         {
           name: 'fetch',
-          message: 'fetch는 api/ segment에서만 써요(shared/api의 http 클라이언트).',
+          message:
+            'fetch는 api/ segment에서만 써요(shared/api의 http 클라이언트).',
         },
       ],
     },
@@ -163,7 +197,14 @@ export default tseslint.config(
           ],
           patterns: [
             {
-              group: ['../api', '../api/*', '../hooks', '../hooks/*', '../store', '../store/*'],
+              group: [
+                '../api',
+                '../api/*',
+                '../hooks',
+                '../hooks/*',
+                '../store',
+                '../store/*',
+              ],
               message: PROPS_ONLY,
             },
           ],

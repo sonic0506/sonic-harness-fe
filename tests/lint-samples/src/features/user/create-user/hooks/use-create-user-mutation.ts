@@ -6,6 +6,7 @@ export function useCreateUserMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createUser,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: userQueryKeys.all }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: userQueryKeys.all }),
   });
 }

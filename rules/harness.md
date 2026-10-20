@@ -110,7 +110,9 @@ export function UserListPage() {
       {({ reset }) => (
         <ErrorBoundary
           onReset={reset}
-          fallbackRender={({ resetErrorBoundary }) => <ListError onRetry={resetErrorBoundary} />}
+          fallbackRender={({ resetErrorBoundary }) => (
+            <ListError onRetry={resetErrorBoundary} />
+          )}
         >
           <Suspense fallback={<UserListSkeleton />}>
             <UserListSection />
