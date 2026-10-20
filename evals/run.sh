@@ -20,9 +20,9 @@ for task in "$here"/evals/tasks/*${1:-}*.md; do
 
   hooklog="${log%.jsonl}.hooks.log"
   : >"$hooklog"
-  # 전역 설정·플러그인·MCP 없이 이 프로젝트의 하네스만으로 실행해요.
+  # 전역 설정·플러그인·MCP 없이, 이 저장소의 플러그인(plugin/)만 얹어서 실행해요.
   HARNESS_HOOK_LOG="$hooklog" claude -p "$(cat "$task")" --model "${MODEL:-sonnet}" --permission-mode acceptEdits \
-    --setting-sources project,local --strict-mcp-config \
+    --setting-sources project,local --strict-mcp-config --plugin-dir "$here/plugin" \
     --allowedTools "Bash(npm run *)" "Bash(npm test*)" "Bash(npx vitest*)" "Bash(npx eslint*)" "Bash(npx tsc*)" \
     --output-format stream-json --verbose > "$log" 2>&1
   if grep -q 'Failed to authenticate' "$log"; then

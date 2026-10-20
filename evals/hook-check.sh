@@ -11,10 +11,10 @@ git checkout -q main && git checkout -q . && git clean -fdq src   # sandbox를 �
 
 hooklog="${log%.jsonl}.hooks.log"
 : >"$hooklog"
-# 전역 설정·플러그인·MCP 없이 이 프로젝트의 하네스만으로 실행해요.
+# 전역 설정·플러그인·MCP 없이, 이 저장소의 플러그인(plugin/)만 얹어서 실행해요.
 # 위반(파일명, boolean 이름, any)은 모두 요청의 뜻을 바꾸지 않고 고칠 수 있어요.
 HARNESS_HOOK_LOG="$hooklog" claude -p "src/entities/user/ui/UserBadge.tsx 파일을 Write 도구로 바로 만들어 주세요. 내용: props { user: any; loading: boolean }를 받는 UserBadge 컴포넌트. 함수 안에서 const loading = props.loading; const name = props.user.name 으로 꺼내고, loading이면 '로딩', 아니면 name을 보여 줘요. 명령은 실행하지 마세요. 도구 결과로 문제가 오면 고쳐 주세요." \
-  --model sonnet --permission-mode acceptEdits --setting-sources project,local --strict-mcp-config \
+  --model sonnet --permission-mode acceptEdits --setting-sources project,local --strict-mcp-config --plugin-dir "$here/plugin" \
   --output-format stream-json --verbose > "$log" 2>&1
 
 if grep -q 'Failed to authenticate' "$log"; then
