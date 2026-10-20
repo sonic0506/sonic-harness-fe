@@ -76,6 +76,15 @@ const DEPS = [
   'react-error-boundary',
   'nuqs@2',
 ];
+// 프레임워크별로 더 쓰는 패키지
+const KIND_DEPS = {
+  next: { dev: ['@next/eslint-plugin-next@16'], prod: ['server-only'] },
+  vite: { dev: [], prod: [] },
+};
+const depsFor = (kind) => ({
+  dev: [...DEV_DEPS, ...KIND_DEPS[kind].dev],
+  prod: [...DEPS, ...KIND_DEPS[kind].prod],
+});
 
 // ---------- 작은 도구 ----------
 const git = (...args) =>
@@ -185,7 +194,8 @@ function missingPackages() {
   const all = { ...pkg.dependencies, ...pkg.devDependencies };
   const name = (spec) => spec.replace(/(.)@[^@/]+$/, '$1'); // '@a/b@5' → '@a/b', 'typescript@~6.0' → 'typescript'
   const missing = (list) => list.filter((spec) => !(name(spec) in all));
-  return { dev: missing(DEV_DEPS), prod: missing(DEPS) };
+  const { dev, prod } = depsFor(projectKind());
+  return { dev: missing(dev), prod: missing(prod) };
 }
 
 function projectKind() {
@@ -274,8 +284,9 @@ const commands = {
       const r = spawnSync('npm', args, { cwd: PROJECT, stdio: 'inherit' });
       if (r.status !== 0) fail(`npm ${args.join(' ')} 실패`);
     };
-    npm('i', '-D', ...DEV_DEPS);
-    npm('i', ...DEPS);
+    const { dev, prod } = depsFor(kind);
+    npm('i', '-D', ...dev);
+    npm('i', ...prod);
     spawnSync('npx', ['msw', 'init', 'public', '--save'], {
       cwd: PROJECT,
       stdio: 'ignore',

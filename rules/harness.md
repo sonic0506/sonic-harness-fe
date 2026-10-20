@@ -307,3 +307,53 @@ type: `feat` · `fix` · `refactor` · `test` · `docs` · `chore` · `style` ·
 3. 각 slice의 `index.ts`에 밖에서 쓸 것만 export해요.
 4. MSW handler와 테스트를 함께 써요.
 5. `npm run lint`, `npm run typecheck`, `npm test`가 통과해야 끝이에요.
+
+## 11. Next.js (App Router)
+
+Vite와 같은 FSD·데이터 규칙을 쓰고, 아래만 더해요. 라우팅 `app/`은 루트에 두고, route 파일은 `src/pages`를 다시 내보내기만 해요(1절).
+
+### 렌더링 결정표
+
+Next 16의 Cache Components 기준이에요. 기본은 요청마다 그리고, 캐시는 `'use cache'`로 직접 켜요.
+
+| 데이터 성격                          | 방식                             | 코드                                                            |
+| ------------------------------------ | -------------------------------- | --------------------------------------------------------------- |
+| 공개, 거의 안 바뀜(소개, 문서, 공지) | 정적                             | 데이터 함수에 `'use cache'` + `cacheLife('days')`               |
+| 공개, 자주 바뀜(공개 목록)           | ISR처럼                          | `'use cache'` + `cacheLife('minutes')` + `cacheTag('<도메인>')` |
+| 요청마다 다름(쿠키, 검색어, 개인화)  | 동적 + 스트리밍                  | 캐시 없이, 요청 값을 읽는 부분만 `<Suspense>`로 감싸요          |
+| 로그인 뒤 상호작용이 많은 화면       | 서버 prefetch + 클라이언트 Query | 아래 예시                                                       |
+
+```tsx
+// src/pages/user/user-list-page.tsx (서버 컴포넌트)
+export async function UserListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const page = Number((await searchParams).page ?? 1);
+  const queryClient = getQueryClient();
+  await queryClient.prefetchQuery(userQueries.list({ page }));
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <Suspense fallback={<UserListSkeleton />}>
+        <UserListSection />{' '}
+        {/* 'use client' ui: useSuspenseQuery(userQueries.list(...)) */}
+      </Suspense>
+    </HydrationBoundary>
+  );
+}
+```
+
+- 서버와 클라이언트가 같은 `xxxQueries` 팩토리를 써요. QueryClient는 `@/shared/api`의 `getQueryClient()`예요(서버는 요청마다 새것, 브라우저는 하나).
+- 생성·수정·삭제는 Vite와 같이 `useMutation` + `http()` + invalidate예요. Server Action은 JS 없이도 동작해야 하는 폼(로그인 등)과 서버 캐시 무효화(`revalidateTag`)에만 써요.
+- 서버에서 `http()`는 `API_ORIGIN` 환경 변수로 절대 주소를 만들어요.
+- 정적 페이지는 빌드 때 그려져요. 그때 부를 API가 없으면 빌드가 실패하니, 빌드 때 필요한 데이터는 파일이나 빌드 환경에서 닿는 주소로 받아요.
+
+### 서버/클라이언트 경계
+
+| 규칙                                                                                                                                    | lint                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `src/pages`·`widgets`의 화면 파일은 서버 컴포넌트예요. `'use client'`는 상호작용이 있는 `ui/` 컴포넌트(leaf)와 `app/providers`에만 둬요 | `sonic/use-client-location`                                      |
+| 비밀 키·서버 전용 코드는 `*.server.ts`에 두고 맨 위에 `import 'server-only'`                                                            | `sonic/server-only-guard`                                        |
+| `ui/` 컴포넌트는 `*.server` 모듈을 가져오지 않아요. 서버 값은 props나 Query hydration으로 받아요                                        | `no-restricted-imports`                                          |
+| `next/image`, `next/link`, Core Web Vitals                                                                                              | `@next/eslint-plugin-next` (Next 프로젝트의 `eslint.config.mjs`) |

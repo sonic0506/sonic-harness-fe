@@ -119,6 +119,57 @@ const noInternalMock = {
   },
 };
 
+// Next.js: 'use client'는 상호작용이 있는 ui/ 컴포넌트와 app/providers에만 둬요.
+// 화면(pages·widgets) 파일은 서버 컴포넌트로 두고, 상호작용 부분만 ui/로 떼어 내요.
+// 허용 위치는 eslint.base.mjs에서 이 규칙을 끄는 ignores로 정해요.
+const useClientLocation = {
+  meta: {
+    type: 'problem',
+    messages: {
+      location:
+        "'use client'는 상호작용이 있는 ui/ 컴포넌트(또는 app/providers)에만 써요. 이 파일은 서버 컴포넌트로 두고, 상호작용 부분을 ui/ 컴포넌트로 떼어 내요.",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      Program(node) {
+        const directive = node.body.find(
+          (n) =>
+            n.type === 'ExpressionStatement' && n.directive === 'use client',
+        );
+        if (directive)
+          context.report({ node: directive, messageId: 'location' });
+      },
+    };
+  },
+};
+
+// Next.js: *.server.ts(x)는 서버 전용이에요. import 'server-only'로 시작해서
+// 클라이언트 번들에 들어가면 빌드가 실패하게 해요(비밀 키가 새지 않게).
+const serverOnlyGuard = {
+  meta: {
+    type: 'problem',
+    messages: {
+      missing:
+        "서버 전용 파일(*.server.ts)은 맨 위에 import 'server-only';를 넣어요. 클라이언트에서 불러오면 빌드가 실패해서 비밀 값이 새지 않아요.",
+    },
+    schema: [],
+  },
+  create(context) {
+    if (!/\.server\.tsx?$/.test(context.filename)) return {};
+    return {
+      Program(node) {
+        const hasGuard = node.body.some(
+          (n) =>
+            n.type === 'ImportDeclaration' && n.source.value === 'server-only',
+        );
+        if (!hasGuard) context.report({ node, messageId: 'missing' });
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: 'sonic' },
   rules: {
@@ -126,5 +177,7 @@ export default {
     'store-selector': storeSelector,
     'no-test-id': noTestId,
     'no-internal-mock': noInternalMock,
+    'use-client-location': useClientLocation,
+    'server-only-guard': serverOnlyGuard,
   },
 };

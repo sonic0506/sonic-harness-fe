@@ -68,6 +68,11 @@ const restricted = (...allowed) =>
   Object.entries(RESTRICTED)
     .filter(([key]) => !allowed.includes(key))
     .map(([, path]) => path);
+const SERVER_ONLY = {
+  group: ['*.server', '**/*.server', '*.server.*', '**/*.server.*'],
+  message:
+    'ui/ 컴포넌트는 서버 전용 모듈(*.server.ts)을 가져오지 않아요. 서버에서 불러온 값은 props나 Query hydration으로 받아요.',
+};
 const PROPS_ONLY =
   'entities/*/ui는 props로만 데이터를 받아요. 조회 훅은 widgets/pages에서 불러 내려 줘요.';
 
@@ -231,7 +236,7 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { paths: restricted('createContext') },
+        { paths: restricted('createContext'), patterns: [SERVER_ONLY] },
       ],
     },
   },
@@ -247,6 +252,7 @@ export default tseslint.config(
             { name: '@tanstack/react-query', message: PROPS_ONLY },
           ],
           patterns: [
+            SERVER_ONLY,
             {
               group: [
                 '../api',
@@ -274,7 +280,14 @@ export default tseslint.config(
     rules: {
       'sonic/no-context-export': 'error',
       'sonic/store-selector': 'error',
+      'sonic/server-only-guard': 'error',
     },
+  },
+  // Next.js 서버/클라이언트 경계: 'use client'는 ui/와 app/providers에만(harness.md 11절)
+  {
+    files: [SRC],
+    ignores: ['src/**/ui/**', 'src/app/providers/**'],
+    rules: { 'sonic/use-client-location': 'error' },
   },
 
   // 테스트 파일: 사용자 행동 중심 테스트(harness.md 7절)
