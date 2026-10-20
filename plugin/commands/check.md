@@ -11,6 +11,8 @@ allowed-tools: Bash(node:*), Bash(npm:*), Bash(npx:*), Read, Grep, Glob, Edit, W
 
 ## 순서
 
+판단은 파일을 근거로 해요. CI에서 무엇이 어떻게 도는지는 `.github/workflows/ci.yml`을, 스크립트는 `package.json`을 읽고 말해요. 읽지 않은 것을 예측해서 말하지 않아요.
+
 1. 받은 규칙 변경이 없다고 나오면, `.sonic-harness/harness.md` 전체로 점검할지 물어요. 원하지 않으면 끝내요.
 2. 바뀐 규칙을 두 종류로 나눠요.
    - **도구로 잡히는 규칙**(`eslint.base.mjs`, `tsconfig.strict.json`, `prettier.base.mjs` 변경): `npm run lint`, `npm run typecheck`, `npx prettier --check .`을 실행해 위반을 모아요.

@@ -7,6 +7,7 @@
 //   node harness.mjs status               버전, 원본의 새 변경, 프로젝트에서 고친 하네스 파일
 //   node harness.mjs update [--apply]     최신 규칙 받기 계획(기본) / 적용
 //   node harness.mjs add-templates <경로...> update가 알려 준 새 템플릿 중 고른 것을 복사
+//   node harness.mjs template-merged <경로>  바뀐 템플릿을 프로젝트 파일에 합친 뒤 완료 처리
 //   node harness.mjs resolve <파일>        충돌 파일을 합친 뒤 완료 처리
 //   node harness.mjs check-diff           마지막 점검 뒤 받은 규칙 diff
 //   node harness.mjs checked              점검을 끝냈다고 기록
@@ -326,6 +327,10 @@ const commands = {
       console.log(
         `합치는 중인 파일: ${lock.pending.join(', ')} (resolve 필요)`,
       );
+    if (lock.templateMerges?.length)
+      console.log(
+        `합치는 중인 템플릿: ${lock.templateMerges.join(', ')} (template-merged 필요)`,
+      );
     if (lock.checkedRef !== lock.ref)
       console.log(
         '받았지만 아직 점검하지 않은 규칙 변경이 있어요 (/sonic-harness:check).',
@@ -386,6 +391,39 @@ const commands = {
       console.log(
         `새 템플릿 (프로젝트에 없음, 고르면 add-templates로 복사해요):\n${newTemplates.map((p) => `  ${p}`).join('\n')}`,
       );
+    // 원본에서 바뀐 템플릿 중 프로젝트에 있는 것. 안 고쳤으면 새 원본으로 바꾸고, 고쳤으면 합치기를 요청해요.
+    // 공백은 빼고 비교해요(프로젝트 Prettier가 줄바꿈만 바꾼 경우는 '안 고침'으로 봐요).
+    const squash = (text) => (text ?? '').replace(/\s+/g, '');
+    const oldTemplates = templatesAt(lock.ref, kind);
+    const changedTemplates = [...templatesAt(latest, kind)]
+      .filter(([p]) => oldTemplates.has(p) && existsSync(join(PROJECT, p)))
+      .map(([p, src]) => ({
+        p,
+        from: oldTemplates.get(p),
+        to: src,
+        before: showAt(lock.ref, oldTemplates.get(p)),
+        after: showAt(latest, src),
+        local: read(join(PROJECT, p)),
+      }))
+      .filter((t) => squash(t.before) !== squash(t.after))
+      .map((t) => ({
+        ...t,
+        state:
+          squash(t.local) === squash(t.after)
+            ? 'same'
+            : squash(t.local) === squash(t.before)
+              ? 'clean'
+              : 'modified',
+      }));
+    const templateLabel = {
+      same: '이미 같음',
+      clean: '갱신 (프로젝트에서 안 고침)',
+      modified: '합치기 필요 (프로젝트에서도 고침)',
+    };
+    if (changedTemplates.length)
+      console.log(
+        `원본에서 바뀐 템플릿:\n${changedTemplates.map((t) => `  ${templateLabel[t.state]}: ${t.p}`).join('\n')}`,
+      );
     const { dev, prod } = missingPackages();
     if (dev.length || prod.length)
       console.log(
@@ -416,12 +454,45 @@ const commands = {
         c.files.some((f) => sha(read(join(DIR, f)) ?? '') !== lock.files[f]),
       ),
     );
-    writeLock({ ...lock, ref: latest, pending, contributing });
+    const templateMerges = new Set(lock.templateMerges ?? []);
+    for (const t of changedTemplates) {
+      if (t.state === 'clean') write(join(PROJECT, t.p), t.after);
+      if (t.state !== 'modified') continue;
+      templateMerges.add(t.p);
+      console.log(`\n— ${t.p}: 원본에서 바뀐 내용 (프로젝트 파일에 합쳐요)`);
+      console.log(
+        git('diff', '--no-color', lock.ref, latest, '--', t.from, t.to),
+      );
+    }
+    writeLock({
+      ...lock,
+      ref: latest,
+      pending,
+      contributing,
+      templateMerges: [...templateMerges],
+    });
     console.log(`\n✓ ${latest.slice(0, 7)}로 갱신했어요.`);
+    if (templateMerges.size)
+      console.log(
+        `  합칠 템플릿 ${templateMerges.size}개: 위 diff를 프로젝트 파일에 반영한 뒤 template-merged <경로>`,
+      );
     if (pending.length)
       console.log(
         `  충돌 ${pending.length}개: .sonic-harness/<파일>(프로젝트), <파일>.base(이전 원본), <파일>.incoming(새 원본)을 합친 뒤 resolve <파일>`,
       );
+  },
+
+  'template-merged'(p) {
+    const lock = needLock();
+    if (!(lock.templateMerges ?? []).includes(p))
+      fail(
+        `${p}는 합치는 중인 템플릿이 아니에요. 대기 중: ${(lock.templateMerges ?? []).join(', ') || '없음'}`,
+      );
+    writeLock({
+      ...lock,
+      templateMerges: lock.templateMerges.filter((t) => t !== p),
+    });
+    console.log(`✓ ${p} 템플릿 합치기를 끝냈어요.`);
   },
 
   'add-templates'(...paths) {
