@@ -17,6 +17,7 @@ allowed-tools: Bash(node:*), Bash(npm:*), Read, Edit, Write
 3. `harness.mjs update --apply`를 실행해요.
    - 계획에 "새 템플릿"이 있으면 무엇을 하는 파일인지 한 줄씩 설명하고, **어떤 것을 추가할지 물어요**. 고른 것만 `harness.mjs add-templates <경로...>`로 복사해요. 고르지 않은 템플릿은 다음 update에서 다시 묻지 않아요.
    - `.husky/pre-commit`이나 `lint-staged.config.mjs`를 추가했으면 `npm i -D lint-staged@17`을 실행해요. `.github/workflows/ci.yml`을 추가했으면 `package.json`에 `build` 스크립트가 있는지 확인해요.
+   - `src/app/providers/url-state-adapter.tsx`를 추가했으면 `npm i nuqs@2`를 실행하고, `app-providers.tsx`에서 `UrlStateAdapter`로 children을 감싸요. `shared/testing/render-with-query.tsx`도 `NuqsTestingAdapter`로 감싸도록 고쳐요(templates의 같은 파일 참고).
 4. 충돌이 없으면 6번으로 가요.
 5. 충돌 파일마다(`.sonic-harness/<파일>`):
    - `<파일>.base`(이전 원본), `<파일>.incoming`(새 원본), `<파일>`(프로젝트)을 읽어요.

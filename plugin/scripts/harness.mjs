@@ -66,7 +66,12 @@ const DEV_DEPS = [
   '@playwright/test',
   '@types/node@24',
 ];
-const DEPS = ['@tanstack/react-query', 'zustand', 'react-error-boundary'];
+const DEPS = [
+  '@tanstack/react-query',
+  'zustand',
+  'react-error-boundary',
+  'nuqs@2',
+];
 
 // ---------- 작은 도구 ----------
 const git = (...args) =>
@@ -149,7 +154,26 @@ const managedAt = (ref) =>
     .filter((f) => !NOT_MANAGED.has(f))
     .map(safeName);
 const newCommits = (from, to) =>
-  git('log', '--oneline', `${from}..${to}`, '--', 'rules', 'templates');
+  git(
+    'log',
+    '--oneline',
+    `${from}..${to}`,
+    '--',
+    'rules',
+    'templates',
+    'templates.vite',
+    'templates.next',
+  );
+// 공통 templates/ 위에 프레임워크별 templates.<kind>/를 겹쳐요. 같은 경로면 프레임워크별 파일이 이겨요.
+// 반환: Map<프로젝트 경로, 원본 경로>
+const templatesAt = (ref, kind) => {
+  const map = new Map(
+    listAt(ref, 'templates').map((p) => [p, `templates/${p}`]),
+  );
+  for (const p of listAt(ref, `templates.${kind}`))
+    map.set(p, `templates.${kind}/${p}`);
+  return map;
+};
 
 function projectKind() {
   const text =
@@ -181,13 +205,13 @@ const commands = {
     }
     const copied = [];
     const skipped = [];
-    for (const f of listAt(ref, 'templates')) {
+    for (const [f, src] of templatesAt(ref, kind)) {
       const dest = join(PROJECT, f);
       if (existsSync(dest)) {
         skipped.push(f);
         continue;
       }
-      write(dest, showAt(ref, `templates/${f}`));
+      write(dest, showAt(ref, src));
       copied.push(f);
     }
     // tsconfig에 strict 묶음 연결
@@ -222,7 +246,8 @@ const commands = {
       checkedRef: ref,
       files,
       pending: [],
-      templates: listAt(ref, 'templates'), // 이미 본 템플릿. update는 이 밖의 새 템플릿만 알려 줘요
+      kind,
+      templates: [...templatesAt(ref, kind).keys()], // 이미 본 템플릿. update는 이 밖의 새 템플릿만 알려 줘요
     });
     console.log(`✓ 하네스 ${ref.slice(0, 7)}를 적용했어요 (${kind}).`);
     console.log(`  .sonic-harness/: ${Object.keys(files).join(', ')}`);
@@ -340,8 +365,9 @@ const commands = {
     console.log(`${lock.ref.slice(0, 7)} → ${latest.slice(0, 7)}`);
     for (const { f, action } of plan) console.log(`  ${label[action]}: ${f}`);
     // 원본에 새로 생긴 템플릿 중 프로젝트에 없는 것. 이미 본(거절한) 템플릿은 다시 묻지 않아요.
-    const seen = new Set(lock.templates ?? listAt(lock.ref, 'templates'));
-    const newTemplates = listAt(latest, 'templates').filter(
+    const kind = lock.kind ?? projectKind();
+    const seen = new Set(lock.templates ?? templatesAt(lock.ref, kind).keys());
+    const newTemplates = [...templatesAt(latest, kind).keys()].filter(
       (p) => !seen.has(p) && !existsSync(join(PROJECT, p)),
     );
     if (newTemplates.length)
@@ -352,7 +378,8 @@ const commands = {
     if (log) console.log(`변경 기록:\n${log.replace(/^/gm, '  ')}`);
     if (flag !== '--apply')
       return console.log('\n(계획만 보여 줬어요. 적용하려면 --apply)');
-    lock.templates = listAt(latest, 'templates');
+    lock.kind = kind;
+    lock.templates = [...templatesAt(latest, kind).keys()];
 
     const pending = [];
     for (const { f, action } of plan) {
@@ -385,14 +412,14 @@ const commands = {
     if (!paths.length) fail('사용법: add-templates <경로...>');
     syncOrigin();
     // 원본 템플릿 목록에 있는 경로만 받아요(경로 밖으로 나가지 않게).
-    const available = new Set(listAt(lock.ref, 'templates'));
+    const available = templatesAt(lock.ref, lock.kind ?? projectKind());
     for (const p of paths) {
       if (!available.has(p)) fail(`원본 템플릿이 아니에요: ${p}`);
       if (existsSync(join(PROJECT, p))) {
         console.log(`  건너뜀(이미 있음): ${p}`);
         continue;
       }
-      write(join(PROJECT, p), showAt(lock.ref, `templates/${p}`));
+      write(join(PROJECT, p), showAt(lock.ref, available.get(p)));
       console.log(`  복사: ${p}`);
     }
     console.log('✓ 템플릿을 복사했어요.');

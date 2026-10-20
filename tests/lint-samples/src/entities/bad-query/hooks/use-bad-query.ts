@@ -1,4 +1,4 @@
-// expect: no-restricted-imports
+// expect: no-restricted-imports, @tanstack/query/prefer-query-options
 import { useQuery } from '@tanstack/react-query';
 
 export const useBadQuery = () =>

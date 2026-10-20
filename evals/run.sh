@@ -46,9 +46,9 @@ for task in "$here"/evals/tasks/*${1:-}*.md; do
     check "6 조회가 있으면 pages/widgets에 Suspense·ErrorBoundary" "! grep -rq useSuspenseQuery src || { grep -rq '<Suspense' src/pages src/widgets && grep -rq 'ErrorBoundary' src/pages src/widgets; }"
     check "13 fetch는 shared/api에만" "! grep -rln 'fetch(' src --include=*.ts --include=*.tsx | grep -v '^src/shared/api/'"
     echo
-    echo "## 수동 확인 (checklist.md 7–12 + 작업별)"
+    echo "## 수동 확인 (checklist.md 7–12, 14–15 + 작업별)"
     echo
-    for i in "7 MSW handler, 정상·빈/실패 테스트" "8 폴더 위치" "9 계층 분리" "10 이름 규칙" "11 빈 상태 처리" "12 불필요한 것 없음" "작업별 항목"; do
+    for i in "7 MSW handler, 정상·빈/실패 테스트" "8 폴더 위치" "9 계층 분리" "10 이름 규칙" "11 빈 상태 처리" "12 불필요한 것 없음" "14 쿼리 팩토리" "15 상태 위치" "작업별 항목"; do
       echo "- [ ] $i"
     done
     echo
