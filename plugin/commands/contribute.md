@@ -8,7 +8,7 @@ allowed-tools: Bash(node:*), Bash(git:*), Bash(gh:*), Bash(npm:*), Read, Edit, W
 
 ## 프로젝트에서 고친 하네스 파일
 
-!`node "${CLAUDE_PLUGIN_ROOT}/scripts/harness.mjs" contribute-diff 2>&1`
+!`node "${CLAUDE_PLUGIN_ROOT}/scripts/harness.mjs" contribute-diff 2>&1 || true`
 
 ## 순서
 

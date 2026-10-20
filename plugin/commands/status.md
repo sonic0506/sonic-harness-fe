@@ -5,7 +5,7 @@ allowed-tools: Bash(node:*)
 
 ## 상태
 
-!`node "${CLAUDE_PLUGIN_ROOT}/scripts/harness.mjs" status 2>&1`
+!`node "${CLAUDE_PLUGIN_ROOT}/scripts/harness.mjs" status 2>&1 || true`
 
 ## 할 일
 

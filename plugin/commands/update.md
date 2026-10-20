@@ -7,7 +7,7 @@ allowed-tools: Bash(node:*), Bash(npm:*), Read, Edit, Write
 
 ## 받을 변경 (계획)
 
-!`node "${CLAUDE_PLUGIN_ROOT}/scripts/harness.mjs" update 2>&1`
+!`node "${CLAUDE_PLUGIN_ROOT}/scripts/harness.mjs" update 2>&1 || true`
 
 ## 순서
 

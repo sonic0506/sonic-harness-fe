@@ -7,7 +7,7 @@ allowed-tools: Bash(node:*), Bash(npm:*), Bash(npx:*), Read, Grep, Glob, Edit, W
 
 ## 바뀐 규칙
 
-!`node "${CLAUDE_PLUGIN_ROOT}/scripts/harness.mjs" check-diff 2>&1`
+!`node "${CLAUDE_PLUGIN_ROOT}/scripts/harness.mjs" check-diff 2>&1 || true`
 
 ## 순서
 
