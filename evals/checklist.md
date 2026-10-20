@@ -33,3 +33,4 @@
 | 01 user-list (URL) | 검색어·페이지가 `pages/user/model/use-*-search-params.ts`의 nuqs 훅에 있고, 쿼리 키 파라미터로 이어져요                                                                                                                    |
 | 03 session-header  | 로그인 정보는 `entities/session/store`의 Zustand. 로그인·로그아웃은 `features/session/sign-in`, `sign-out`. 헤더는 `widgets`                                                                                               |
 | 04 confirm-dialog  | `ConfirmDialog`는 `ui/` 안 compound 컴포넌트, 열림 상태는 Context로 부품끼리만 나누고 index에는 컴포넌트만 export. 조회는 `entities/api-key`, 삭제는 `features/api-key/delete-api-key`, invalidate는 `apiKeyQueries.all()` |
+| 05 next-users      | `/notice`는 `'use cache'` + `cacheLife`(정적), `/users`는 page(서버)에서 `prefetchQuery(userQueries.list(...))` + `HydrationBoundary`, 검색 UI만 `'use client'` ui/. `*.server.ts`는 `server-only`                         |
