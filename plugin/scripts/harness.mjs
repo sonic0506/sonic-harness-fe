@@ -6,6 +6,7 @@
 //   node harness.mjs deps                 필요한 패키지와 npm scripts를 설치해요
 //   node harness.mjs status               버전, 원본의 새 변경, 프로젝트에서 고친 하네스 파일
 //   node harness.mjs update [--apply]     최신 규칙 받기 계획(기본) / 적용
+//   node harness.mjs add-templates <경로...> update가 알려 준 새 템플릿 중 고른 것을 복사
 //   node harness.mjs resolve <파일>        충돌 파일을 합친 뒤 완료 처리
 //   node harness.mjs check-diff           마지막 점검 뒤 받은 규칙 diff
 //   node harness.mjs checked              점검을 끝냈다고 기록
@@ -54,6 +55,7 @@ const DEV_DEPS = [
   '@commitlint/cli@21',
   '@commitlint/config-conventional@21',
   'husky@9',
+  'lint-staged@17',
   'vitest',
   '@vitejs/plugin-react',
   'jsdom',
@@ -214,7 +216,14 @@ const commands = {
           `${claude.trimEnd()}\n@AGENTS.md\n`,
         );
     }
-    writeLock({ origin: ORIGIN, ref, checkedRef: ref, files, pending: [] });
+    writeLock({
+      origin: ORIGIN,
+      ref,
+      checkedRef: ref,
+      files,
+      pending: [],
+      templates: listAt(ref, 'templates'), // 이미 본 템플릿. update는 이 밖의 새 템플릿만 알려 줘요
+    });
     console.log(`✓ 하네스 ${ref.slice(0, 7)}를 적용했어요 (${kind}).`);
     console.log(`  .sonic-harness/: ${Object.keys(files).join(', ')}`);
     console.log(`  복사한 템플릿: ${copied.join(', ') || '없음'}`);
@@ -330,10 +339,20 @@ const commands = {
     };
     console.log(`${lock.ref.slice(0, 7)} → ${latest.slice(0, 7)}`);
     for (const { f, action } of plan) console.log(`  ${label[action]}: ${f}`);
+    // 원본에 새로 생긴 템플릿 중 프로젝트에 없는 것. 이미 본(거절한) 템플릿은 다시 묻지 않아요.
+    const seen = new Set(lock.templates ?? listAt(lock.ref, 'templates'));
+    const newTemplates = listAt(latest, 'templates').filter(
+      (p) => !seen.has(p) && !existsSync(join(PROJECT, p)),
+    );
+    if (newTemplates.length)
+      console.log(
+        `새 템플릿 (프로젝트에 없음, 고르면 add-templates로 복사해요):\n${newTemplates.map((p) => `  ${p}`).join('\n')}`,
+      );
     const log = newCommits(lock.ref, latest);
     if (log) console.log(`변경 기록:\n${log.replace(/^/gm, '  ')}`);
     if (flag !== '--apply')
       return console.log('\n(계획만 보여 줬어요. 적용하려면 --apply)');
+    lock.templates = listAt(latest, 'templates');
 
     const pending = [];
     for (const { f, action } of plan) {
@@ -359,6 +378,24 @@ const commands = {
       console.log(
         `  충돌 ${pending.length}개: .sonic-harness/<파일>(프로젝트), <파일>.base(이전 원본), <파일>.incoming(새 원본)을 합친 뒤 resolve <파일>`,
       );
+  },
+
+  'add-templates'(...paths) {
+    const lock = needLock();
+    if (!paths.length) fail('사용법: add-templates <경로...>');
+    syncOrigin();
+    // 원본 템플릿 목록에 있는 경로만 받아요(경로 밖으로 나가지 않게).
+    const available = new Set(listAt(lock.ref, 'templates'));
+    for (const p of paths) {
+      if (!available.has(p)) fail(`원본 템플릿이 아니에요: ${p}`);
+      if (existsSync(join(PROJECT, p))) {
+        console.log(`  건너뜀(이미 있음): ${p}`);
+        continue;
+      }
+      write(join(PROJECT, p), showAt(lock.ref, `templates/${p}`));
+      console.log(`  복사: ${p}`);
+    }
+    console.log('✓ 템플릿을 복사했어요.');
   },
 
   resolve(f) {

@@ -192,6 +192,8 @@ it('사용자가 없으면 빈 상태를 보여 줘요', async () => {
 
 Conventional Commits, 설명은 한국어예요. commitlint가 `commit-msg`에서 막아요.
 
+커밋 전(`pre-commit`)에는 lint-staged가 staged 파일에 Prettier와 `eslint --fix`를 실행해요. 고칠 수 있는 건 고쳐서 커밋하고, 남은 lint 에러가 있으면 커밋이 막혀요. PR과 main push마다 CI(`.github/workflows/ci.yml`)가 lint·typecheck·test·build를 실행해요. 검사를 건너뛰는 `--no-verify`는 쓰지 않아요.
+
 ```
 feat(user): 사용자 목록 화면 추가
 fix(session): 로그아웃 뒤 이전 이름이 남는 문제 수정

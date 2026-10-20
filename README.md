@@ -41,6 +41,7 @@ _React + TypeScript 코딩 규칙을 글이 아니라 도구로 지키게 하는
 - **데이터 흐름 고정**: 조회는 `useSuspenseQuery`, 변경은 `useMutation`, `entities/*/ui`는 props로만 데이터를 받아요. `fetch`는 `api/`에서만 써요.
 - **자동 수정 루프**: hook이 Claude의 모든 파일 수정 뒤에 format과 lint를 돌리고, 고치지 못한 에러를 다시 Claude에게 넘겨요.
 - **원본과 동기화**: `lock.json`이 받은 버전과 파일 해시를 기억해서, 원본의 변경과 프로젝트의 변경을 구분해 합쳐요.
+- **사람 코드도 같은 규칙**: 커밋 전 lint-staged(format + lint)와 CI(lint·typecheck·test·build)가 Claude hook과 같은 규칙으로 검사해요.
 - **검증 장치**: 규칙마다 lint 샘플 테스트가 있고, Claude의 실제 행동을 기준 작업 3개로 평가해요.
 
 ## 시작하기
