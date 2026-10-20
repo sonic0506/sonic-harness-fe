@@ -22,4 +22,4 @@ allowed-tools: Bash(node:*), Bash(npm:*), Read, Edit, Write
    - `.sonic-harness/<파일>`에 저장하고 `harness.mjs resolve <파일>`을 실행해요.
    - 프로젝트에 남긴 차이는 나중에 `/sonic-harness:contribute`로 원본에 올릴 수 있다고 알려요.
 6. `npm run lint`와 `npm run typecheck`를 실행해 결과만 알려요(고치지 않아요).
-7. 새 규칙으로 기존 코드를 점검하려면 `/sonic-harness:check`를 실행하라고 안내해요.
+7. 받은 규칙으로 기존 코드를 점검하려면 `/sonic-harness:check`를 실행하라고 안내해요(update를 여러 번 해도 check는 마지막 점검 뒤 변경을 모두 봐요).
