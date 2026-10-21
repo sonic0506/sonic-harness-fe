@@ -27,7 +27,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ORIGIN =
@@ -407,10 +407,6 @@ const commands = {
     const newTemplates = [...templatesAt(latest, kind).keys()].filter(
       (p) => !seen.has(p) && !existsSync(join(PROJECT, p)),
     );
-    if (newTemplates.length)
-      console.log(
-        `새 템플릿 (프로젝트에 없음, 고르면 add-templates로 복사해요):\n${newTemplates.map((p) => `  ${p}`).join('\n')}`,
-      );
     // 원본에서 바뀐 템플릿 중 프로젝트에 있는 것. 안 고쳤으면 새 원본으로 바꾸고, 고쳤으면 합치기를 요청해요.
     // 공백은 빼고 비교해요(프로젝트 Prettier가 줄바꿈만 바꾼 경우는 '안 고침'으로 봐요).
     const squash = (text) => (text ?? '').replace(/\s+/g, '');
@@ -440,6 +436,36 @@ const commands = {
       clean: '갱신 (프로젝트에서 안 고침)',
       modified: '합치기 필요 (프로젝트에서도 고침)',
     };
+    // 바뀌거나 새로 받을 템플릿이 import하는 새 템플릿은 빼면 빌드가 깨져서 '필수'로 표시해요.
+    const required = new Map();
+    const incoming = [
+      ...changedTemplates
+        .filter((t) => t.state !== 'same')
+        .map((t) => [t.p, t.after]),
+      ...newTemplates.map((p) => [
+        p,
+        showAt(latest, templatesAt(latest, kind).get(p)),
+      ]),
+    ];
+    for (const [from, text] of incoming)
+      for (const [, spec] of (text ?? '').matchAll(
+        /from '(@\/[^']+|\.[^']*)'/g,
+      )) {
+        const base = spec.startsWith('@/')
+          ? `src/${spec.slice(2)}`
+          : posix.join(posix.dirname(from), spec);
+        for (const p of newTemplates)
+          if (
+            p !== from &&
+            [base, `${base}/`].some((b) => p.startsWith(b)) &&
+            !required.has(p)
+          )
+            required.set(p, from);
+      }
+    if (newTemplates.length)
+      console.log(
+        `새 템플릿 (프로젝트에 없음, 고르면 add-templates로 복사해요):\n${newTemplates.map((p) => `  ${p}${required.has(p) ? ` (필수: ${required.get(p)}가 불러와요)` : ''}`).join('\n')}`,
+      );
     if (changedTemplates.length)
       console.log(
         `원본에서 바뀐 템플릿:\n${changedTemplates.map((t) => `  ${templateLabel[t.state]}: ${t.p}`).join('\n')}`,
