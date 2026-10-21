@@ -37,16 +37,20 @@ cat > src/main.tsx <<'EOF'
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/app/app';
+import { env } from '@/shared/config';
 
 // 개발 화면에서는 MSW로 API 응답을 만들어요.
 async function enableMocking() {
-  if (!import.meta.env.DEV) return;
+  if (!env.DEV) return;
   const { worker } = await import('@/app/mocks/browser');
   await worker.start({ onUnhandledFrame: 'bypass' });
 }
 
+const root = document.getElementById('root');
+if (!root) throw new Error('index.html에 #root가 없어요');
+
 void enableMocking().then(() => {
-  createRoot(document.getElementById('root')!).render(
+  createRoot(root).render(
     <StrictMode>
       <App />
     </StrictMode>,
