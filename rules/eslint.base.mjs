@@ -299,6 +299,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-return': 'error',
       '@typescript-eslint/no-unsafe-argument': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-deprecated': 'error',
       // as는 쓰지 않아요(as const는 괜찮아요). 경계(api/, lib/, shared/, 테스트)만 아래에서 풀어요
       '@typescript-eslint/consistent-type-assertions': [
         'error',

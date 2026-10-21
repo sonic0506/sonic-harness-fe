@@ -1,4 +1,4 @@
-import { isServer,QueryClient } from '@tanstack/react-query';
+import { environmentManager, QueryClient } from '@tanstack/react-query';
 import { cache } from 'react';
 
 // 서버에서 prefetch한 데이터를 hydration 직후 바로 다시 부르지 않게 staleTime을 둬요.
@@ -10,7 +10,7 @@ const getServerQueryClient = cache(makeQueryClient);
 let browserQueryClient: QueryClient | undefined;
 
 export function getQueryClient() {
-  if (isServer) return getServerQueryClient();
+  if (environmentManager.isServer()) return getServerQueryClient();
   browserQueryClient ??= makeQueryClient();
   return browserQueryClient;
 }
