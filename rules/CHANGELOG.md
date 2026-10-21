@@ -3,6 +3,7 @@
 새 항목은 맨 위에 써요. `/sonic-harness:update`가 이 기록과 git 로그로 무엇이 바뀌었는지 보여 줘요.
 
 - 2026-10-21: lint 무시 목록에 `storybook-static` 추가. Storybook 빌드 결과까지 lint해서 느려지고 에러가 나던 문제
+- 2026-10-21: contribute가 프로젝트에서 고친 템플릿도 원본에 PR로 올려요(규칙은 이름, 템플릿은 프로젝트 기준 경로)
 - 2026-10-21: Next MockStarter가 MSW를 한 번만 시작해요(개발 화면 StrictMode에서 두 번 시작하면 에러)
 - 2026-10-21: Next 개발 화면 MSW 템플릿(instrumentation + mock-starter, `NEXT_PUBLIC_API_MOCKING`). 템플릿 import를 새 정렬 규칙에 맞춤
 - 2026-10-21: TypeScript 세부와 환경 변수. import 정렬(simple-import-sort), `any`·`no-unsafe-*` 금지, `unknown`은 경계에서만, `as`·`!`·`enum` 금지, switch 빠짐 검사. 환경 변수는 `shared/config/env.ts`(zod)에서만 읽어요(Vite·Next env 템플릿, http가 env 사용). update 뒤 `npm run lint -- --fix`로 import 순서를 맞춰요. Next init은 tsconfig에서 `.next/dev`를 빼요(next dev가 만드는 타입 파일이 noUnused를 어겨요)

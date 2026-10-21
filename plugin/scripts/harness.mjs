@@ -107,6 +107,13 @@ const safeName = (f) =>
   /^[A-Za-z0-9._-]+$/.test(f) && !f.includes('..')
     ? f
     : fail(`하네스 파일 이름이 올바르지 않아요: ${f}`);
+// 템플릿 경로(src/shared/api/http.ts 같은 프로젝트 기준 상대 경로)
+const safePath = (p) =>
+  /^[A-Za-z0-9._-][A-Za-z0-9._/-]*$/.test(p) && !p.includes('..')
+    ? p
+    : fail(`템플릿 경로가 올바르지 않아요: ${p}`);
+// 공백은 빼고 비교해요(프로젝트 Prettier가 줄바꿈만 바꾼 경우는 '안 고침'으로 봐요).
+const squash = (text) => (text ?? '').replace(/\s+/g, '');
 const safeRef = (ref) =>
   /^[0-9a-f]{40}$/.test(ref)
     ? ref
@@ -118,9 +125,10 @@ function readLock() {
   safeRef(lock.checkedRef);
   Object.keys(lock.files).forEach(safeName);
   lock.pending.forEach(safeName);
-  Object.values(lock.contributing ?? {}).forEach((c) =>
-    c.files.forEach(safeName),
-  );
+  Object.values(lock.contributing ?? {}).forEach((c) => {
+    c.files.forEach(safeName);
+    (c.templates ?? []).forEach(safePath);
+  });
   return lock;
 }
 const writeLock = (lock) =>
@@ -408,8 +416,6 @@ const commands = {
       (p) => !seen.has(p) && !existsSync(join(PROJECT, p)),
     );
     // 원본에서 바뀐 템플릿 중 프로젝트에 있는 것. 안 고쳤으면 새 원본으로 바꾸고, 고쳤으면 합치기를 요청해요.
-    // 공백은 빼고 비교해요(프로젝트 Prettier가 줄바꿈만 바꾼 경우는 '안 고침'으로 봐요).
-    const squash = (text) => (text ?? '').replace(/\s+/g, '');
     const oldTemplates = templatesAt(lock.ref, kind);
     const changedTemplates = [...templatesAt(latest, kind)]
       .filter(([p]) => oldTemplates.has(p) && existsSync(join(PROJECT, p)))
@@ -496,8 +502,16 @@ const commands = {
     }
     // PR이 합쳐져 원본과 같아진 파일은 'PR 진행 중' 기록에서 지워요.
     const contributing = Object.fromEntries(
-      Object.entries(lock.contributing ?? {}).filter(([, c]) =>
-        c.files.some((f) => sha(read(join(DIR, f)) ?? '') !== lock.files[f]),
+      Object.entries(lock.contributing ?? {}).filter(
+        ([, c]) =>
+          c.files.some(
+            (f) => sha(read(join(DIR, f)) ?? '') !== lock.files[f],
+          ) ||
+          (c.templates ?? []).some(
+            (p) =>
+              squash(read(join(PROJECT, p))) !==
+              squash(showAt(latest, templatesAt(latest, kind).get(p))),
+          ),
       ),
     );
     const templateMerges = new Set(lock.templateMerges ?? []);
@@ -602,29 +616,36 @@ const commands = {
     syncOrigin();
     const main = `origin/${defaultBranch()}`;
     let found = false;
-    for (const [f, h] of Object.entries(lock.files)) {
-      const local = join(DIR, f);
-      if (sha(read(local) ?? '') === h) continue;
+    const show = (src, base, local, label) => {
       found = true;
-      const base = showAt(lock.ref, `rules/${f}`) ?? '';
-      const tmp = join(HOME, 'tmp', f);
+      const tmp = join(HOME, 'tmp', src);
       write(tmp, base);
       const r = spawnSync(
         'git',
         ['diff', '--no-index', '--no-color', tmp, local],
-        {
-          encoding: 'utf8',
-        },
+        { encoding: 'utf8' },
       );
       console.log(
         r.stdout
-          .replaceAll(tmp, `/원본/${f}`)
-          .replaceAll(local, `/프로젝트/${f}`),
+          .replaceAll(tmp, `/원본/${src}`)
+          .replaceAll(local, `/프로젝트/${label}`),
       );
-      if (showAt(main, `rules/${f}`) !== base)
+      if (showAt(main, src) !== base)
         console.log(
-          `⚠ ${f}는 원본에서도 바뀌었어요. 먼저 /sonic-harness:update로 받으세요.\n`,
+          `⚠ ${label}는 원본에서도 바뀌었어요. 먼저 /sonic-harness:update로 받으세요.\n`,
         );
+    };
+    for (const [f, h] of Object.entries(lock.files)) {
+      const local = join(DIR, f);
+      if (sha(read(local) ?? '') !== h)
+        show(`rules/${f}`, showAt(lock.ref, `rules/${f}`) ?? '', local, f);
+    }
+    // 템플릿은 프로젝트 파일이라 많이 고쳐요. 공통으로 쓸 만한 변경만 골라서 올려요.
+    for (const [p, src] of templatesAt(lock.ref, lock.kind ?? projectKind())) {
+      const local = join(PROJECT, p);
+      const base = showAt(lock.ref, src) ?? '';
+      if (existsSync(local) && squash(read(local)) !== squash(base))
+        show(src, base, local, `${p} (템플릿)`);
     }
     if (!found) console.log('프로젝트에서 고친 하네스 파일이 없어요.');
   },
@@ -635,36 +656,49 @@ const commands = {
       fail('사용법: contribute-start <브랜치> <파일...>');
     if (!/^[A-Za-z0-9._/-]+$/.test(branch) || branch.startsWith('-'))
       fail(`브랜치 이름이 올바르지 않아요: ${branch}`);
-    files.forEach(safeName);
     syncOrigin();
     const main = `origin/${defaultBranch()}`;
     if (git('status', '--porcelain'))
       fail(`원본 clone(${CLONE})에 커밋하지 않은 변경이 있어요.`);
-    for (const f of files) {
-      if (!(f in lock.files)) fail(`${f}는 하네스 파일이 아니에요.`);
-      if (showAt(main, `rules/${f}`) !== showAt(lock.ref, `rules/${f}`))
+    // 규칙 파일(.sonic-harness/<이름>)과 템플릿(프로젝트 기준 경로)을 함께 받아요.
+    const available = templatesAt(lock.ref, lock.kind ?? projectKind());
+    const moves = files.map((f) => {
+      if (f in lock.files)
+        return { f, src: `rules/${safeName(f)}`, local: join(DIR, f) };
+      if (available.has(safePath(f)))
+        return {
+          f,
+          src: available.get(f),
+          local: join(PROJECT, f),
+          isTemplate: true,
+        };
+      return fail(`${f}는 하네스 파일이나 템플릿이 아니에요.`);
+    });
+    for (const { f, src } of moves)
+      if (showAt(main, src) !== showAt(lock.ref, src))
         fail(
           `${f}는 원본에서도 바뀌었어요. /sonic-harness:update로 먼저 받으세요.`,
         );
-    }
     // 프로젝트 파일을 먼저 같은 Prettier 설정으로 맞춰요. 그래야 PR이 합쳐진 뒤 update에서 '이미 같음'이 돼요.
-    spawnSync(
-      'npx',
-      ['prettier', '--write', ...files.map((f) => join(DIR, f))],
-      {
-        cwd: PROJECT,
-        stdio: 'ignore',
-      },
-    );
+    spawnSync('npx', ['prettier', '--write', ...moves.map((m) => m.local)], {
+      cwd: PROJECT,
+      stdio: 'ignore',
+    });
     git('checkout', '--quiet', '-B', branch, main);
-    for (const f of files) write(join(CLONE, 'rules', f), read(join(DIR, f)));
+    for (const m of moves) write(join(CLONE, m.src), read(m.local));
     // status가 이 파일을 'PR 진행 중'으로 보여 주게 기록해요. update로 원본과 같아지면 지워져요.
     writeLock({
       ...lock,
-      contributing: { ...lock.contributing, [branch]: { files } },
+      contributing: {
+        ...lock.contributing,
+        [branch]: {
+          files: moves.filter((m) => !m.isTemplate).map((m) => m.f),
+          templates: moves.filter((m) => m.isTemplate).map((m) => m.f),
+        },
+      },
     });
     console.log(
-      `✓ 원본 clone에 ${branch} 브랜치를 만들고 ${files.join(', ')}를 옮겼어요.`,
+      `✓ 원본 clone에 ${branch} 브랜치를 만들고 ${moves.map((m) => m.src).join(', ')}를 옮겼어요.`,
     );
     console.log(`  원본 clone: ${CLONE}`);
     console.log(
