@@ -2,6 +2,7 @@
 
 새 항목은 맨 위에 써요. `/sonic-harness:update`가 이 기록과 git 로그로 무엇이 바뀌었는지 보여 줘요.
 
+- 2026-10-21: slice 바로 아래는 `index.ts`만, 페이지 컴포넌트도 `ui/`에(예시·lint 샘플·eval sandbox 경로). Next 규칙 보강(sonic-ui-site에서 막힌 곳): 루트 `pages/` 때문에 `usePathname` 등이 `null`일 수 있음, Zustand `persist`는 `skipHydration` + `rehydrate()`, 11절 "라우트 파일"(동적 라우트 `generateStaticParams` 다시 내보내기, `app/not-found.tsx` 필수, `error.tsx`의 `'use client'` 예외, CI용 `prepare`에 `next typegen`). CI 템플릿 actions v4→v7(Node 20 deprecated)
 - 2026-10-21: 템플릿 코드 포맷을 하네스 Prettier 설정에 맞춰요(`npm run format:templates`, contribute도 실행)
 - 2026-10-21: deprecated API 금지(`no-deprecated`). TanStack Query 5.104 기준으로 서버 prefetch는 `query(...).catch(noop)`, `getQueryClient`는 `environmentManager.isServer()`
 - 2026-10-21: lint 무시 목록에 `storybook-static` 추가. Storybook 빌드 결과까지 lint해서 느려지고 에러가 나던 문제

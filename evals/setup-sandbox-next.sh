@@ -17,7 +17,7 @@ $harness init
 $harness deps >/dev/null
 
 # 라우팅 app/을 루트로 옮기고 src/app은 FSD app 레이어로 써요 (/sonic-harness:init에서 Claude가 하는 일과 같아요)
-mkdir -p app src/pages/home
+mkdir -p app src/pages/home/ui
 mv src/app/layout.tsx src/app/globals.css src/app/favicon.ico app/
 rm -f src/app/page.tsx src/app/page.module.css
 cat > app/layout.tsx <<'EOF'
@@ -41,13 +41,13 @@ EOF
 cat > app/page.tsx <<'EOF'
 export { HomePage as default } from '@/pages/home';
 EOF
-cat > src/pages/home/home-page.tsx <<'EOF'
+cat > src/pages/home/ui/home-page.tsx <<'EOF'
 export function HomePage() {
   return <main>시작</main>;
 }
 EOF
 cat > src/pages/home/index.ts <<'EOF'
-export { HomePage } from './home-page';
+export { HomePage } from './ui/home-page';
 EOF
 
 npx prettier --write . >/dev/null
