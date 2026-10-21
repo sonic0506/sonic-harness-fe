@@ -1,8 +1,10 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { type ReactNode,useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
+
+import { UrlStateAdapter } from './url-state-adapter';
 
 // 앱 전체 렌더 예외를 받는 마지막 경계예요. 데이터 블록의 에러는 page에서 따로 감싸요.
 function AppErrorFallback() {
@@ -13,7 +15,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
   return (
     <ErrorBoundary FallbackComponent={AppErrorFallback}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <UrlStateAdapter>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </UrlStateAdapter>
     </ErrorBoundary>
   );
 }

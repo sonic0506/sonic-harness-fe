@@ -8,7 +8,14 @@ import { fileURLToPath } from 'node:url';
 const dir = dirname(fileURLToPath(import.meta.url));
 const eslint = spawnSync(
   'npx',
-  ['eslint', '--format', 'json', '--config', '../../rules/eslint.base.mjs', 'src'],
+  [
+    'eslint',
+    '--format',
+    'json',
+    '--config',
+    '../../rules/eslint.base.mjs',
+    'src',
+  ],
   { cwd: dir, encoding: 'utf8', maxBuffer: 1 << 26 },
 );
 if (!eslint.stdout) throw new Error(eslint.stderr);
@@ -16,14 +23,18 @@ if (!eslint.stdout) throw new Error(eslint.stderr);
 let failures = 0;
 for (const result of JSON.parse(eslint.stdout)) {
   const file = relative(dir, result.filePath);
-  const expectLine = readFileSync(result.filePath, 'utf8').match(/^\/\/ expect: (.+)$/m);
+  const expectLine = readFileSync(result.filePath, 'utf8').match(
+    /^\/\/ expect: (.+)$/m,
+  );
   const expected = expectLine
     ? expectLine[1]
         .split(',')
         .map((s) => s.trim())
         .sort()
     : [];
-  const actual = [...new Set(result.messages.map((m) => m.ruleId ?? 'parse-error'))].sort();
+  const actual = [
+    ...new Set(result.messages.map((m) => m.ruleId ?? 'parse-error')),
+  ].sort();
   const ok = JSON.stringify(expected) === JSON.stringify(actual);
   if (!ok) {
     failures++;
@@ -33,8 +44,14 @@ for (const result of JSON.parse(eslint.stdout)) {
     for (const m of result.messages)
       console.log(`    ${m.line}:${m.column} ${m.ruleId} ${m.message}`);
   } else {
-    console.log(`✓ ${file}${expected.length ? ` (${expected.join(', ')})` : ''}`);
+    console.log(
+      `✓ ${file}${expected.length ? ` (${expected.join(', ')})` : ''}`,
+    );
   }
 }
-console.log(failures ? `\n${failures}개 샘플이 기대와 달라요.` : '\n모든 샘플이 기대대로예요.');
+console.log(
+  failures
+    ? `\n${failures}개 샘플이 기대와 달라요.`
+    : '\n모든 샘플이 기대대로예요.',
+);
 process.exit(failures ? 1 : 0);

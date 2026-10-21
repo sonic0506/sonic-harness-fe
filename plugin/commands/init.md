@@ -22,7 +22,7 @@ allowed-tools: Bash(node:*), Bash(npm:*), Bash(npx:*), Bash(git:*), Bash(ls:*), 
 5. 직접 손볼 곳을 처리해요. 각각 무엇을 바꾸는지 말하고 진행해요.
    - **건너뛴 템플릿**: 프로젝트에 원래 있던 `eslint.config.*`, `prettier.config.*`, `vitest.config.*` 등이 하네스 템플릿과 다르면 diff를 보여 주고, 하네스 템플릿으로 바꿀지 물어요. 특히 `eslint.config.mjs`는 `./.sonic-harness/eslint.base.mjs`를 불러와야 해요.
    - 다른 lint 도구(예: Vite 템플릿의 oxlint, `.oxlintrc.json`)가 있으면 제거를 제안해요.
-   - **Vite**: `vite.config.ts`에 `resolve: { tsconfigPaths: true }`를 넣어요. `src/App.tsx`·`src/App.css`·`src/index.css`가 있으면 `src/app/app.tsx`(이름 있는 export `App`, `AppProviders`로 감싸기)와 `src/app/styles/`로 옮기고, `src/main.tsx`는 `@/app/app`만 불러요. `src/assets`는 `src/shared/assets`로 옮겨요. 개발 화면 MSW: `main.tsx`에서 dev일 때 `@/app/mocks/browser`의 `worker.start({ onUnhandledFrame: 'bypass' })` 뒤에 렌더해요.
+   - **Vite**: `vite.config.ts`에 `resolve: { tsconfigPaths: true }`를 넣어요. `src/App.tsx`·`src/App.css`·`src/index.css`가 있으면 `src/app/app.tsx`(이름 있는 export `App`, `AppProviders`로 감싸기)와 `src/app/styles/`로 옮기고, `src/main.tsx`는 `@/app/app`만 불러요. `src/assets`는 `src/shared/assets`로 옮겨요. `main.tsx`도 하네스 규칙을 따라요: `document.getElementById('root')!` 대신 없으면 에러를 던지고, `import.meta.env` 대신 `@/shared/config`의 `env`를 써요. 개발 화면 MSW: `main.tsx`에서 `env.DEV`일 때 `@/app/mocks/browser`의 `worker.start({ onUnhandledFrame: 'bypass' })` 뒤에 렌더해요.
    - **Next.js**: `src/app/`에 라우팅 파일(`layout.tsx`, `page.tsx`, `globals.css`, `favicon.ico` 등)이 있으면 루트 `app/`으로 옮겨요(`src/app`은 FSD app 레이어). `app/layout.tsx`는 `@/app/providers`의 `AppProviders`로 감싸고, `app/page.tsx`는 `src/pages/<도메인>`을 다시 내보내기만 해요. 옮긴 뒤 `.next/`에 옛 경로 타입이 남아 typecheck가 실패하면 `npx next build`를 한 번 실행해 다시 만들어요.
 6. 확인: `npm run lint`, `npm run typecheck`, `npx vitest run --passWithNoTests`. 실패하면 고쳐요(규칙을 끄는 주석은 쓰지 않아요).
 7. 끝나면 알려 줘요:

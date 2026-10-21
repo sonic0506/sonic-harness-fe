@@ -3,7 +3,17 @@ import globals from 'globals';
 import harness from './rules/eslint.base.mjs';
 
 export default [
-  { ignores: ['tests/lint-samples/src/**', 'templates/**', 'sandbox/**'] },
+  {
+    ignores: [
+      'tests/lint-samples/src/**',
+      'templates/**',
+      'templates.*/**',
+      'sandbox/**',
+    ],
+  },
   ...harness,
-  { files: ['plugin/**/*.mjs', 'evals/**/*.mjs'], languageOptions: { globals: globals.node } },
+  {
+    files: ['plugin/**/*.mjs', 'evals/**/*.mjs'],
+    languageOptions: { globals: globals.node },
+  },
 ];
