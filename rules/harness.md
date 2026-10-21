@@ -18,7 +18,7 @@ src/
 └─ shared/     도메인을 모르는 공용 자원     shared/{ui,api,lib,hooks,model,assets}/
 ```
 
-slice 안의 segment는 필요한 것만 만들어요.
+slice 안의 segment는 필요한 것만 만들어요. slice 바로 아래에는 `index.ts`(public API)만 두고, 페이지 컴포넌트를 포함한 나머지는 모두 segment에 둬요(예: `pages/user/ui/user-list-page.tsx`).
 
 | segment | 담는 것                                 | 파일 이름                                       |
 | ------- | --------------------------------------- | ----------------------------------------------- |
@@ -36,7 +36,7 @@ slice 안의 segment는 필요한 것만 만들어요.
 - 다른 slice는 **`index.ts`(public API)로만** 가져와요. `@/entities/user`는 되고 `@/entities/user/ui/user-row`는 안 돼요. shared는 segment마다 index가 있어요: `@/shared/api`.
 - `index.ts`에는 밖에서 쓰는 것만 export해요.
 - slice 안은 상대 경로(`../model/user.dto`), slice 밖은 `@/` 별칭을 써요.
-- Next.js(App Router): 라우팅용 `app/`은 **프로젝트 루트**에 두고, route 파일은 `src/pages`를 다시 내보내기만 해요. FSD 레이어는 `src/`에 있어요. 루트에 빈 `pages/` 폴더(`.gitkeep`)를 두면 Next가 `src/pages`를 Pages Router로 읽지 않아요.
+- Next.js(App Router): 라우팅용 `app/`은 **프로젝트 루트**에 두고, route 파일은 `src/pages`를 다시 내보내기만 해요. FSD 레이어는 `src/`에 있어요. 루트에 빈 `pages/` 폴더(`.gitkeep`)를 두면 Next가 `src/pages`를 Pages Router로 읽지 않아요. 대신 `next-env.d.ts`에 Pages Router 호환 타입이 들어가 `usePathname`·`useSearchParams`·`useParams`가 `null`을 돌려줄 수 있어요. `usePathname() ?? ''`처럼 좁혀 써요.
 
 ```tsx
 // app/users/page.tsx (Next 루트)
@@ -119,7 +119,7 @@ export function UserRow({ user, onSelect }: UserRowProps) { … }
 - `app/providers`에 앱 전체 ErrorBoundary 하나를 두어 렌더 예외를 받아요.
 
 ```tsx
-// pages/user/user-list-page.tsx
+// pages/user/ui/user-list-page.tsx
 export function UserListPage() {
   return (
     <QueryErrorResetBoundary>
@@ -162,7 +162,7 @@ export function useUserListSearchParams() {
     q: parseAsString.withDefault(''),
   });
 }
-// pages/user/user-list-page.tsx
+// pages/user/ui/user-list-page.tsx
 const [{ page, q }, setSearchParams] = useUserListSearchParams();
 ```
 
@@ -192,6 +192,7 @@ export function useUserDialog() {
 - 서버에서 받은 목록이나 상세는 넣지 않아요. Query 캐시가 그 역할이에요.
 - 컴포넌트에서는 selector로 필요한 값만 꺼내요: `useSessionStore((s) => s.session)`. `useSessionStore()`는 lint가 막아요.
 - `persist`(새로고침 뒤 유지)는 UI 환경설정에만 써요. **토큰·개인정보는 저장하지 않아요**(로그인은 httpOnly 쿠키 + 앱 시작 때 세션 조회).
+- Next(서버 렌더링)에서 `persist`는 `skipHydration: true`로 두고 마운트 뒤 `persist.rehydrate()`를 불러요(서버와 첫 화면이 달라 hydration 에러가 나요). 테마처럼 첫 그리기 전에 값이 필요하면 `<head>`의 작은 init script로 먼저 적용하고 `<html suppressHydrationWarning>`을 둬요.
 
 ## 5. 이름 규칙
 
@@ -343,7 +344,7 @@ Next 16의 Cache Components 기준이에요. 기본은 요청마다 그리고, �
 | 로그인 뒤 상호작용이 많은 화면       | 서버 prefetch + 클라이언트 Query | 아래 예시                                                       |
 
 ```tsx
-// src/pages/user/user-list-page.tsx (서버 컴포넌트)
+// src/pages/user/ui/user-list-page.tsx (서버 컴포넌트)
 export async function UserListPage({
   searchParams,
 }: {
@@ -368,6 +369,13 @@ export async function UserListPage({
 - 생성·수정·삭제는 Vite와 같이 `useMutation` + `http()` + invalidate예요. Server Action은 JS 없이도 동작해야 하는 폼(로그인 등)과 서버 캐시 무효화(`revalidateTag`)에만 써요.
 - 서버에서 `http()`는 `API_ORIGIN` 환경 변수로 절대 주소를 만들어요.
 - 정적 페이지는 빌드 때 그려져요. 그때 부를 API가 없으면 빌드가 실패하니, 빌드 때 필요한 데이터는 파일이나 빌드 환경에서 닿는 주소로 받아요.
+
+### 라우트 파일
+
+- 동적 라우트(`[slug]`)는 `generateStaticParams`도 slice에서 다시 내보내요: `export { DetailPage as default, generateStaticParams } from '@/pages/detail';`. Cache Components에서는 `dynamicParams`를 쓸 수 없어서, 알려진 param을 **모두** 돌려줘야 없는 주소의 `notFound()`가 정적 404가 돼요(빠지면 200 + noindex로 응답해요).
+- `app/not-found.tsx`는 꼭 만들어요. Next 기본 404 화면의 전역 `<style>`(`body` 배경)이 Cache Components의 Activity로 숨겨진 채 DOM에 남아, 다른 페이지로 이동한 뒤에도 배경을 바꿔요.
+- `app/error.tsx`·`app/global-error.tsx`는 Next가 파일 자체에 `'use client'`를 요구해서, "route 파일은 다시 내보내기만"과 "`'use client'`는 `ui/`·`app/providers`에만"의 예외예요. 첫 줄 `'use client';` 다음에 `src/pages`를 다시 내보내요.
+- 이미지 import 타입(`*.png`)은 `next-env.d.ts`(`.gitignore`)에 있어요. CI는 build 전에 lint·typecheck를 돌려서 이 파일이 없으면 실패해요. `package.json`의 `prepare`에 `next typegen`을 넣어 `npm ci` 때 만들어요(`"prepare": "husky && next typegen"`).
 
 ### 서버/클라이언트 경계
 
