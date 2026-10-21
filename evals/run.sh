@@ -17,6 +17,7 @@ for task in "$here"/evals/tasks/*${1:-}*.md; do
   log="$here/evals/results/$stamp-$name.jsonl"
   echo "▶ $name"
   git checkout -q main && git checkout -q . && git clean -fdq src e2e app
+  git clean -fqX -- '.env*' # 지난 작업이 남긴 env 파일(.gitignore 대상)도 지워요
 
   hooklog="${log%.jsonl}.hooks.log"
   : >"$hooklog"
