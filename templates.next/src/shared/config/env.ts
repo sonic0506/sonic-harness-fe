@@ -6,6 +6,12 @@ import { z } from 'zod';
 const schema = z.object({
   // 서버 컴포넌트의 prefetch가 쓰는 절대 주소예요. 비밀 값이 아니라 여기에 둬요.
   API_ORIGIN: z.url().default('http://localhost:3000'),
+  // 'true'면 서버(instrumentation)와 브라우저(MockStarter) 모두 MSW로 응답해요.
+  // 실제 서버가 없는 동안 .env.development.local에 NEXT_PUBLIC_API_MOCKING=true를 둬요.
+  NEXT_PUBLIC_API_MOCKING: z.enum(['true', 'false']).default('false'),
 });
 
-export const env = schema.parse({ API_ORIGIN: process.env.API_ORIGIN });
+export const env = schema.parse({
+  API_ORIGIN: process.env.API_ORIGIN,
+  NEXT_PUBLIC_API_MOCKING: process.env.NEXT_PUBLIC_API_MOCKING,
+});

@@ -2,6 +2,7 @@
 
 새 항목은 맨 위에 써요. `/sonic-harness:update`가 이 기록과 git 로그로 무엇이 바뀌었는지 보여 줘요.
 
+- 2026-10-21: Next 개발 화면 MSW 템플릿(instrumentation + mock-starter, `NEXT_PUBLIC_API_MOCKING`). 템플릿 import를 새 정렬 규칙에 맞춤
 - 2026-10-21: TypeScript 세부와 환경 변수. import 정렬(simple-import-sort), `any`·`no-unsafe-*` 금지, `unknown`은 경계에서만, `as`·`!`·`enum` 금지, switch 빠짐 검사. 환경 변수는 `shared/config/env.ts`(zod)에서만 읽어요(Vite·Next env 템플릿, http가 env 사용). update 뒤 `npm run lint -- --fix`로 import 순서를 맞춰요. Next init은 tsconfig에서 `.next/dev`를 빼요(next dev가 만드는 타입 파일이 noUnused를 어겨요)
 - 2026-10-21: Next.js 기준. 데이터 성격별 렌더링 결정표(Cache Components), 서버 prefetch + HydrationBoundary, 'use client'는 ui/·app/providers에만, *.server.ts는 server-only. Next 전용 템플릿(getQueryClient, 서버용 http, @next/eslint-plugin-next)
 - 2026-10-21: update가 원본에서 바뀐 템플릿을 전달해요(안 고친 파일은 갱신, 고친 파일은 diff로 합치기). `renderWithQuery`에 nuqs `hasMemory`. check는 CI·스크립트 파일을 근거로 판단
