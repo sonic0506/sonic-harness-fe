@@ -316,7 +316,8 @@ const commands = {
       `scripts.typecheck=${kind === 'vite' ? 'tsc -b' : 'tsc --noEmit'}`,
       'scripts.test=vitest run',
       'scripts.e2e=playwright test',
-      'scripts.prepare=husky',
+      // Next: 이미지 import 타입이 next-env.d.ts(.gitignore)에 있어서, npm ci 때 만들어야 CI의 lint·typecheck가 통과해요.
+      `scripts.prepare=${kind === 'vite' ? 'husky' : 'husky && next typegen'}`,
     );
     if (existsSync(join(PROJECT, '.git')))
       spawnSync('npx', ['husky'], { cwd: PROJECT, stdio: 'ignore' });
