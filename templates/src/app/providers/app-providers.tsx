@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { type ReactNode,useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 
 import { UrlStateAdapter } from './url-state-adapter';

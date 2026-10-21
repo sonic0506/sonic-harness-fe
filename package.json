@@ -5,7 +5,8 @@
   "scripts": {
     "test:lint": "node tests/lint-samples/run.mjs",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write . && npm run format:templates",
+    "format:templates": "prettier --ignore-path /dev/null --config rules/prettier.base.mjs --write \"templates*/**/*.{ts,tsx,mts}\""
   },
   "keywords": [],
   "author": "",

@@ -715,6 +715,11 @@ const commands = {
       cwd: CLONE,
       stdio: 'ignore',
     });
+    // 템플릿은 templates/의 prettier 설정을 못 읽어서 하네스 설정으로 따로 맞춰요.
+    spawnSync('npm', ['run', 'format:templates'], {
+      cwd: CLONE,
+      stdio: 'ignore',
+    });
     const lint = spawnSync('npx', ['eslint', '.'], {
       cwd: CLONE,
       encoding: 'utf8',

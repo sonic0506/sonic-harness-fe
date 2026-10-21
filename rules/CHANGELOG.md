@@ -2,6 +2,7 @@
 
 새 항목은 맨 위에 써요. `/sonic-harness:update`가 이 기록과 git 로그로 무엇이 바뀌었는지 보여 줘요.
 
+- 2026-10-21: 템플릿 코드 포맷을 하네스 Prettier 설정에 맞춰요(`npm run format:templates`, contribute도 실행)
 - 2026-10-21: deprecated API 금지(`no-deprecated`). TanStack Query 5.104 기준으로 서버 prefetch는 `query(...).catch(noop)`, `getQueryClient`는 `environmentManager.isServer()`
 - 2026-10-21: lint 무시 목록에 `storybook-static` 추가. Storybook 빌드 결과까지 lint해서 느려지고 에러가 나던 문제
 - 2026-10-21: contribute가 프로젝트에서 고친 템플릿도 원본에 PR로 올려요(규칙은 이름, 템플릿은 프로젝트 기준 경로)
