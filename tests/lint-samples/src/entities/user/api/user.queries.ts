@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
+
 import type { GetUsersParams } from '../model/user.dto';
 import { getUsers } from './user.api';
 

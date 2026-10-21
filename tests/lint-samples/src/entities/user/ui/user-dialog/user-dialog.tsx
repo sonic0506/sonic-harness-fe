@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
+
 import { UserDialogContext, useUserDialog } from './user-dialog.context';
 
 function UserDialogClose() {

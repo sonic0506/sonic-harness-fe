@@ -1,5 +1,5 @@
-import { http } from '@/shared/api';
 import type { UserDto } from '@/entities/user';
+import { http } from '@/shared/api';
 
 export type CreateUser = { name: string };
 export const createUser = (body: CreateUser) =>

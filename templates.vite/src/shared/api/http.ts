@@ -1,4 +1,6 @@
-export const API_BASE_URL = '/api';
+import { env } from '@/shared/config';
+
+export const API_BASE_URL = env.VITE_API_BASE_URL;
 
 export class HttpError extends Error {
   readonly status: number;

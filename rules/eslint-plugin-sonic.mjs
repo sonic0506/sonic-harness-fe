@@ -170,6 +170,76 @@ const serverOnlyGuard = {
   },
 };
 
+// TypeScript: unknown은 외부 값을 받는 경계에서만 써요. 그 밖에서는 zod 스키마나 구체 타입으로 좁혀서 넘겨요.
+const BOUNDARY =
+  /[\\/](api|lib)[\\/]|[\\/]model[\\/][^\\/]+\.schema\.tsx?$|[\\/]shared[\\/](config|server)[\\/]|\.test\.tsx?$/;
+const unknownAtBoundary = {
+  meta: {
+    type: 'problem',
+    messages: {
+      unknown:
+        'unknown은 외부 값을 받는 경계(api/, model/*.schema.ts, lib/의 파서, catch)에서만 써요. 여기서는 zod 스키마나 구체 타입으로 좁힌 값을 받아요.',
+    },
+    schema: [],
+  },
+  create(context) {
+    if (BOUNDARY.test(context.filename)) return {};
+    return {
+      TSUnknownKeyword(node) {
+        const inCatch = context.sourceCode
+          .getAncestors(node)
+          .some((a) => a.type === 'CatchClause');
+        if (!inCatch) context.report({ node, messageId: 'unknown' });
+      },
+    };
+  },
+};
+
+// TypeScript: enum 대신 as const 객체 + 유니언 타입을 써요(런타임 코드가 생기지 않아요).
+const noEnum = {
+  meta: {
+    type: 'problem',
+    messages: {
+      enum: "enum 대신 as const 객체와 유니언 타입을 써요. 예: const ROLE = { admin: 'admin' } as const; type Role = (typeof ROLE)[keyof typeof ROLE];",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      TSEnumDeclaration(node) {
+        context.report({ node, messageId: 'enum' });
+      },
+    };
+  },
+};
+
+// 환경 변수: process.env·import.meta.env는 shared/config(env.ts)에서만 읽어요. 그 밖에서는 검증된 env를 써요.
+const noDirectEnv = {
+  meta: {
+    type: 'problem',
+    messages: {
+      env: '환경 변수를 직접 읽지 않아요. @/shared/config의 env(서버 전용 값은 @/shared/server의 serverEnv)를 써요.',
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      MemberExpression(node) {
+        const { object, property } = node;
+        const name = property.type === 'Identifier' ? property.name : null;
+        const isProcessEnv =
+          object.type === 'Identifier' &&
+          object.name === 'process' &&
+          name === 'env';
+        const isImportMetaEnv =
+          object.type === 'MetaProperty' && name === 'env';
+        if (isProcessEnv || isImportMetaEnv)
+          context.report({ node, messageId: 'env' });
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: 'sonic' },
   rules: {
@@ -179,5 +249,8 @@ export default {
     'no-internal-mock': noInternalMock,
     'use-client-location': useClientLocation,
     'server-only-guard': serverOnlyGuard,
+    'unknown-at-boundary': unknownAtBoundary,
+    'no-enum': noEnum,
+    'no-direct-env': noDirectEnv,
   },
 };

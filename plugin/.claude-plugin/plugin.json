@@ -1,6 +1,6 @@
 {
   "name": "sonic-harness",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "React + TypeScript 코딩 하네스(FSD, lint hook, 규칙 문서)를 프로젝트에 적용하고 원본과 동기화해요.",
   "author": {
     "name": "sonic0506",

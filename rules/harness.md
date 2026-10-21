@@ -214,8 +214,25 @@ export function useUserDialog() {
 ## 6. TypeScript
 
 - `.sonic-harness/tsconfig.strict.json`을 extends해요: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`.
-- `any`는 쓰지 않아요(lint). 모르는 값은 `unknown`으로 받고 zod schema로 좁혀요.
 - 타입만 가져올 때는 `import type`을 써요.
+
+| 규칙           | 기준                                                                                                                                                                                                                | lint                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `any`          | 쓰지 않아요. 라이브러리가 `any`를 돌려줘도 그대로 퍼뜨리지 않고 타입을 붙여요                                                                                                                                       | `no-explicit-any`, `no-unsafe-*` |
+| `unknown`      | 외부 값을 받는 **경계에서만**: `api/`(응답), `model/*.schema.ts`(zod 파서), `lib/`의 파서, `catch (error)`, `shared/config`. 받은 즉시 zod나 타입 가드로 좁혀서 넘겨요                                              | `sonic/unknown-at-boundary`      |
+| `as`           | 쓰지 않아요(`as const`는 괜찮아요). 응답 타입을 붙이는 경계(`api/`, `lib/`, `shared/`, 테스트)만 허용하고, 객체 리터럴 `{…} as T`는 어디서도 안 돼요. 대신 타입 주석(`const user: User = …`)이나 `satisfies`를 써요 | `consistent-type-assertions`     |
+| `!` (non-null) | 쓰지 않아요. `if (!x) return`, `??`, `?.`로 처리해요                                                                                                                                                                | `no-non-null-assertion`          |
+| `enum`         | 쓰지 않아요. `const ROLE = { admin: 'admin' } as const` + `type Role = (typeof ROLE)[keyof typeof ROLE]`                                                                                                            | `sonic/no-enum`                  |
+| `switch`       | 유니언을 다루면 모든 경우를 써요. 값이 늘면 lint가 알려 줘요                                                                                                                                                        | `switch-exhaustiveness-check`    |
+| import 순서    | 외부 패키지 → `@/` → 상대 경로 → 스타일. 직접 맞추지 않고 `eslint --fix`(hook·lint-staged)가 맞춰요                                                                                                                 | `simple-import-sort`             |
+
+### 환경 변수
+
+- `process.env`, `import.meta.env`는 `src/shared/config/env.ts`에서만 읽어요. 다른 곳은 `import { env } from '@/shared/config'`를 써요(`sonic/no-direct-env`).
+- 새 값은 env.ts의 zod 스키마에 넣어요. 없거나 형식이 틀리면 앱이 시작할 때 바로 실패해요.
+- 브라우저에 보이는 값만 env.ts에 둬요(Vite `VITE_*`, Next `NEXT_PUBLIC_*`). Next는 `process.env.NEXT_PUBLIC_X`를 글자 그대로 써야 번들에 들어가서 하나씩 적어요.
+- 비밀 값(API 키, DB 주소)은 Next에서만 `src/shared/server/env.server.ts`에 두고 맨 위에 `import 'server-only'`를 넣어요. Vite에는 비밀 값을 두지 않아요(모두 브라우저에 보여요).
+- 실제 값은 `.env.local`(커밋하지 않음)에, 이름과 예시는 `.env.example`에 둬요.
 
 ## 7. 테스트
 

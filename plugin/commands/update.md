@@ -25,5 +25,5 @@ allowed-tools: Bash(node:*), Bash(npm:*), Read, Edit, Write
    - 원본의 새 변경을 받아들이면서 프로젝트에서 고친 부분을 남기는 합친 내용을 만들어 **diff를 보여 주고 확인을 받아요**.
    - `.sonic-harness/<파일>`에 저장하고 `harness.mjs resolve <파일>`을 실행해요.
    - 프로젝트에 남긴 차이는 나중에 `/sonic-harness:contribute`로 원본에 올릴 수 있다고 알려요.
-6. `npm run lint`와 `npm run typecheck`를 실행해 결과만 알려요(고치지 않아요).
+6. `npm run lint -- --fix`를 한 번 실행해요. import 순서처럼 자동으로 고칠 수 있는 것만 고쳐져요. 고친 파일 목록을 보여 주고, 그다음 `npm run lint`와 `npm run typecheck`를 실행해 남은 결과만 알려요(남은 것은 고치지 않아요).
 7. 받은 규칙으로 기존 코드를 점검하려면 `/sonic-harness:check`를 실행하라고 안내해요(update를 여러 번 해도 check는 마지막 점검 뒤 변경을 모두 봐요).

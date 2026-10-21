@@ -7,6 +7,7 @@ import boundaries from 'eslint-plugin-boundaries';
 import checkFile from 'eslint-plugin-check-file';
 import globals from 'globals';
 import pluginQuery from '@tanstack/eslint-plugin-query';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import testingLibrary from 'eslint-plugin-testing-library';
 import vitest from '@vitest/eslint-plugin';
 import sonic from './eslint-plugin-sonic.mjs';
@@ -283,6 +284,48 @@ export default tseslint.config(
       'sonic/server-only-guard': 'error',
     },
   },
+  // import 정렬과 TypeScript 세부(harness.md 6절)
+  {
+    files: [SRC],
+    plugins: { 'simple-import-sort': simpleImportSort },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
+      '@typescript-eslint/no-unsafe-call': 'error',
+      '@typescript-eslint/no-unsafe-return': 'error',
+      '@typescript-eslint/no-unsafe-argument': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      // as는 쓰지 않아요(as const는 괜찮아요). 경계(api/, lib/, shared/, 테스트)만 아래에서 풀어요
+      '@typescript-eslint/consistent-type-assertions': [
+        'error',
+        { assertionStyle: 'never' },
+      ],
+      '@typescript-eslint/switch-exhaustiveness-check': [
+        'error',
+        { considerDefaultExhaustiveForUnions: true },
+      ],
+      'sonic/unknown-at-boundary': 'error',
+      'sonic/no-enum': 'error',
+      'sonic/no-direct-env': 'error',
+    },
+  },
+  {
+    files: ['src/**/api/**', 'src/**/lib/**', 'src/shared/**', TEST],
+    rules: {
+      '@typescript-eslint/consistent-type-assertions': [
+        'error',
+        { assertionStyle: 'as', objectLiteralTypeAssertions: 'never' },
+      ],
+    },
+  },
+  {
+    files: ['src/shared/config/**', 'src/shared/server/**'],
+    rules: { 'sonic/no-direct-env': 'off' },
+  },
+
   // Next.js 서버/클라이언트 경계: 'use client'는 ui/와 app/providers에만(harness.md 11절)
   {
     files: [SRC],

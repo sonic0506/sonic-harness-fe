@@ -1,6 +1,8 @@
 import { Suspense } from 'react';
+
 import { useSessionStore } from '@/entities/session';
 import { UserListSection } from '@/widgets/user-list';
+
 import { useUserListSearchParams } from './model/use-user-list-search-params';
 
 export function UserListPage() {

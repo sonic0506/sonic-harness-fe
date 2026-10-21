@@ -58,6 +58,7 @@ const DEV_DEPS = [
   'husky@9',
   'lint-staged@17',
   '@tanstack/eslint-plugin-query@5',
+  'eslint-plugin-simple-import-sort@14',
   'eslint-plugin-testing-library@7',
   '@vitest/eslint-plugin@1',
   'vitest',
@@ -75,6 +76,7 @@ const DEPS = [
   'zustand',
   'react-error-boundary',
   'nuqs@2',
+  'zod@4',
 ];
 // 프레임워크별로 더 쓰는 패키지
 const KIND_DEPS = {
