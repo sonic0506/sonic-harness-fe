@@ -82,6 +82,7 @@ export default tseslint.config(
     ignores: [
       'dist',
       'build',
+      'storybook-static',
       '.next',
       'coverage',
       'playwright-report',

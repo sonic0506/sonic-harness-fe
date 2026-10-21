@@ -71,6 +71,7 @@ shared/api (http 클라이언트)
 - mock은 MSW예요. handler는 해당 slice의 `api/*.mock.ts`에 만들고 그 slice `index.ts`로 export해요(`userHandlers`). 모으는 곳은 **`app/mocks/handlers.ts`** 하나예요(shared는 entities를 몰라서 shared에서 모으지 않아요).
   - 테스트: `vitest.setup.ts`가 `shared/testing`의 `server`에 이 handler를 등록해요. 테스트에서는 `server.use(...)`로 빈 목록·에러만 덮어써요. 테스트마다 `setupServer`를 새로 만들지 않아요.
   - 개발 화면(Vite): `src/main.tsx`에서 dev일 때만 `@/app/mocks/browser`의 `worker.start()` 뒤에 렌더해요. `public/mockServiceWorker.js`는 `npx msw init public --save`로 만들어요(init이 해요).
+  - 개발 화면(Next): 템플릿이 이미 연결해 뒀어요. 서버 prefetch는 루트 `instrumentation.ts` → `app/mocks/server.ts`, 브라우저는 `app/providers/mock-starter.tsx`(`next/dynamic` + `ssr: false`)가 받아요. `.env.development.local`에 `NEXT_PUBLIC_API_MOCKING=true`를 두면 켜져요. `msw/browser`를 다른 곳에서 직접 import하지 않아요(서버 번들에서 풀리지 않아 빌드가 깨져요).
 
 ```ts
 // shared/api/http.ts

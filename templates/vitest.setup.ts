@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom/vitest';
+
 import { cleanup } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
+
 import { handlers } from './src/app/mocks/handlers';
 import { server } from './src/shared/testing/server';
 
