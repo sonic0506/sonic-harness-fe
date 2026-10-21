@@ -254,6 +254,13 @@ const commands = {
         ),
       );
     if (kind === 'next') {
+      // next dev가 만드는 .next/dev/types는 noUnused*를 어겨요. 빌드용 .next/types만 검사해요
+      const nextTs = read(ts);
+      if (!nextTs.includes('".next/dev"'))
+        writeFileSync(
+          ts,
+          nextTs.replace('"exclude": [', '"exclude": [".next/dev", '),
+        );
       write(join(PROJECT, 'pages/.gitkeep'), ''); // src/pages를 Pages Router로 읽지 않게
       const claude = read(join(PROJECT, 'CLAUDE.md')) ?? '';
       if (

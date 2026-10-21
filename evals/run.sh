@@ -45,7 +45,7 @@ for task in "$here"/evals/tasks/*${1:-}*.md; do
     # 조회(useSuspenseQuery)가 있을 때만: 그걸 감싸는 Suspense·ErrorBoundary가 pages/widgets에 있어야 해요
     check "6 조회가 있으면 pages/widgets에 Suspense·ErrorBoundary" "! grep -rq useSuspenseQuery src || { grep -rq '<Suspense' src/pages src/widgets && grep -rq 'ErrorBoundary' src/pages src/widgets; }"
     check "build" "npm run build"
-    check "13 fetch는 shared/api에만" "! grep -rln 'fetch(' src --include=*.ts --include=*.tsx | grep -v '^src/shared/api/'"
+    check "13 fetch는 shared/api에만" "! grep -rlnE '(^|[^A-Za-z_.])fetch\\(' src --include=*.ts --include=*.tsx | grep -v '^src/shared/api/'"
     echo
     echo "## 수동 확인 (checklist.md 7–12, 14–15 + 작업별)"
     echo
