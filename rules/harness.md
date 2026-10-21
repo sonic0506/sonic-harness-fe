@@ -224,7 +224,7 @@ export function useUserDialog() {
 | `!` (non-null) | 쓰지 않아요. `if (!x) return`, `??`, `?.`로 처리해요                                                                                                                                                                | `no-non-null-assertion`          |
 | `enum`         | 쓰지 않아요. `const ROLE = { admin: 'admin' } as const` + `type Role = (typeof ROLE)[keyof typeof ROLE]`                                                                                                            | `sonic/no-enum`                  |
 | `switch`       | 유니언을 다루면 모든 경우를 써요. 값이 늘면 lint가 알려 줘요                                                                                                                                                        | `switch-exhaustiveness-check`    |
-| import 순서    | 외부 패키지 → `@/` → 상대 경로 → 스타일. 직접 맞추지 않고 `eslint --fix`(hook·lint-staged)가 맞춰요                                                                                                                 | `simple-import-sort`             |
+| import 순서    | 부수 효과 import(`import './x.css'`) → 외부 패키지 → `@/` → 상대 경로. 직접 맞추지 않고 `eslint --fix`(hook·lint-staged)가 맞춰요                                                                                   | `simple-import-sort`             |
 
 ### 환경 변수
 
