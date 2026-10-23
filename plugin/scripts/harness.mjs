@@ -4,6 +4,7 @@
 //
 //   node harness.mjs init                 원본 최신 규칙과 템플릿을 깔고 lock.json을 만들어요
 //   node harness.mjs deps                 필요한 패키지와 npm scripts를 설치해요
+//   node harness.mjs design               디자인 시스템(sonic-ui)을 켜요: 설치, eslint·CLAUDE.md 연결, lock 기록
 //   node harness.mjs status               버전, 원본의 새 변경, 프로젝트에서 고친 하네스 파일
 //   node harness.mjs update [--apply]     최신 규칙 받기 계획(기본) / 적용
 //   node harness.mjs add-templates <경로...> update가 알려 준 새 템플릿 중 고른 것을 복사
@@ -83,10 +84,30 @@ const KIND_DEPS = {
   next: { dev: ['@next/eslint-plugin-next@16'], prod: ['server-only'] },
   vite: { dev: [], prod: [] },
 };
-const depsFor = (kind) => ({
+// 디자인 시스템을 켜면(lock.designSystem) 더 쓰는 패키지. 버전은 늘 latest를 받아요(package.json에는 ^ 범위).
+// 글꼴은 이름을 바꾸지 않는 fontsource로 받아요(sonic-ui가 "IBM Plex Sans KR"/"IBM Plex Mono" 이름을 찾아요).
+const DESIGN_DEPS = [
+  '@xonic0506/sonic-ui',
+  'lucide-react',
+  '@fontsource/ibm-plex-sans-kr',
+  '@fontsource/ibm-plex-mono',
+];
+const DESIGN_DOCS = [
+  '@node_modules/@xonic0506/sonic-ui/DESIGN.md',
+  '@node_modules/@xonic0506/sonic-ui/AI-RULES.md',
+];
+const depsFor = (kind, designSystem = false) => ({
   dev: [...DEV_DEPS, ...KIND_DEPS[kind].dev],
-  prod: [...DEPS, ...KIND_DEPS[kind].prod],
+  prod: [
+    ...DEPS,
+    ...KIND_DEPS[kind].prod,
+    ...(designSystem ? ['@xonic0506/sonic-ui'] : []), // 글꼴은 다른 방식으로 불러와도 돼요
+  ],
 });
+const hasPackage = (name) => {
+  const pkg = JSON.parse(read(join(PROJECT, 'package.json')) ?? '{}');
+  return name in { ...pkg.dependencies, ...pkg.devDependencies };
+};
 
 // ---------- 작은 도구 ----------
 const git = (...args) =>
@@ -199,12 +220,12 @@ const templatesAt = (ref, kind) => {
 };
 
 // 하네스가 쓰는 패키지 중 package.json에 없는 것. 규칙이 새 ESLint 플러그인을 쓰게 되면 update가 알려 줘요.
-function missingPackages() {
+function missingPackages(designSystem) {
   const pkg = JSON.parse(read(join(PROJECT, 'package.json')) ?? '{}');
   const all = { ...pkg.dependencies, ...pkg.devDependencies };
   const name = (spec) => spec.replace(/(.)@[^@/]+$/, '$1'); // '@a/b@5' → '@a/b', 'typescript@~6.0' → 'typescript'
   const missing = (list) => list.filter((spec) => !(name(spec) in all));
-  const { dev, prod } = depsFor(projectKind());
+  const { dev, prod } = depsFor(projectKind(), designSystem);
   return { dev: missing(dev), prod: missing(prod) };
 }
 
@@ -247,6 +268,17 @@ const commands = {
       write(dest, showAt(ref, src));
       copied.push(f);
     }
+    // sonic-ui 문서는 설치한 뒤에만 불러와요(없는 파일을 불러오지 않게). design이 다시 넣어요.
+    if (copied.includes('CLAUDE.md')) {
+      const claudePath = join(PROJECT, 'CLAUDE.md');
+      writeFileSync(
+        claudePath,
+        read(claudePath)
+          .split('\n')
+          .filter((line) => !DESIGN_DOCS.includes(line.trim()))
+          .join('\n'),
+      );
+    }
     // tsconfig에 strict 묶음 연결
     const ts = join(
       PROJECT,
@@ -287,6 +319,7 @@ const commands = {
       files,
       pending: [],
       kind,
+      designSystem: false, // design 명령이 true로 바꿔요
       templates: [...templatesAt(ref, kind).keys()], // 이미 본 템플릿. update는 이 밖의 새 템플릿만 알려 줘요
     });
     console.log(`✓ 하네스 ${ref.slice(0, 7)}를 적용했어요 (${kind}).`);
@@ -328,11 +361,80 @@ const commands = {
     console.log('✓ 패키지와 scripts를 설치했어요.');
   },
 
+  // CSS 연결, 앱 루트 isolate처럼 프로젝트마다 위치가 다른 일은 명령어(init.md)에서 Claude가 해요.
+  design() {
+    const lock = needLock();
+    const r = spawnSync('npm', ['i', ...DESIGN_DEPS], {
+      cwd: PROJECT,
+      stdio: 'inherit',
+    });
+    if (r.status !== 0) fail(`npm i ${DESIGN_DEPS.join(' ')} 실패`);
+    // sonic-ui의 tailwind.css(bg-primary, text-muted …)를 쓰려면 Tailwind v4가 있어야 해요.
+    const hadTailwind = hasPackage('tailwindcss');
+    const tailwind = [
+      'tailwindcss@4',
+      projectKind() === 'next'
+        ? '@tailwindcss/postcss@4'
+        : '@tailwindcss/vite@4',
+    ];
+    if (!hadTailwind) {
+      const t = spawnSync('npm', ['i', '-D', ...tailwind], {
+        cwd: PROJECT,
+        stdio: 'inherit',
+      });
+      if (t.status !== 0) fail(`npm i -D ${tailwind.join(' ')} 실패`);
+    }
+    const todo = [];
+    const eslintPath = join(PROJECT, 'eslint.config.mjs');
+    const eslint = read(eslintPath) ?? '';
+    const on = eslint
+      .replace(
+        /^\/\/ 디자인 규칙\(sonic-ui\):.*$/m,
+        '// 디자인 규칙(sonic-ui): DESIGN.md의 토큰 밖 값(임의 값 클래스, 기본 팔레트, hex)을 막아요.',
+      )
+      .replace(
+        /^\/\/ (import sonicDesign from '@xonic0506\/sonic-ui\/eslint-design-rules';)$/m,
+        '$1',
+      )
+      .replace(/^(\s*)\/\/ (sonicDesign,)$/m, '$1$2');
+    if (/^import sonicDesign/m.test(on) && /^\s*sonicDesign,$/m.test(on))
+      writeFileSync(eslintPath, on);
+    else
+      todo.push(
+        "eslint.config.mjs에 import sonicDesign from '@xonic0506/sonic-ui/eslint-design-rules'와 배열 안 sonicDesign을 넣어요",
+      );
+    const claudePath = join(PROJECT, 'CLAUDE.md');
+    const claude = read(claudePath) ?? '';
+    const missingDocs = DESIGN_DOCS.filter((d) => !claude.includes(d));
+    if (missingDocs.length && claude.includes('@.sonic-harness/harness.md'))
+      writeFileSync(
+        claudePath,
+        claude.replace(/^@\.sonic-harness\/harness\.md$/m, (line) =>
+          [line, ...missingDocs].join('\n'),
+        ),
+      );
+    else if (missingDocs.length)
+      todo.push(`CLAUDE.md에 ${missingDocs.join(', ')}를 넣어요`);
+    writeLock({ ...lock, designSystem: true });
+    console.log('✓ 디자인 시스템(sonic-ui)을 켰어요.');
+    console.log(`  설치: ${DESIGN_DEPS.join(', ')}`);
+    console.log(
+      `  tailwindcss: ${hadTailwind ? '이미 있음' : `새로 설치 (${tailwind.join(', ')}, 연결 필요)`}`,
+    );
+    if (todo.length)
+      console.log(`  직접 할 일:\n${todo.map((t) => `    ${t}`).join('\n')}`);
+  },
+
   status() {
     const lock = needLock();
     const latest = syncOrigin();
     console.log(`원본: ${lock.origin}`);
     console.log(`적용 버전: ${lock.ref.slice(0, 7)} (${lock.updatedAt})`);
+    console.log(
+      lock.designSystem
+        ? '디자인 시스템(sonic-ui): 사용'
+        : '디자인 시스템(sonic-ui): 사용 안 함 (켜려면 /sonic-harness:init design)',
+    );
     const log = newCommits(lock.ref, latest);
     console.log(
       log
@@ -477,7 +579,9 @@ const commands = {
       console.log(
         `원본에서 바뀐 템플릿:\n${changedTemplates.map((t) => `  ${templateLabel[t.state]}: ${t.p}`).join('\n')}`,
       );
-    const { dev, prod } = missingPackages();
+    // designSystem이 없던 예전 lock은 sonic-ui가 설치돼 있으면 쓰는 것으로 봐요.
+    lock.designSystem ??= hasPackage('@xonic0506/sonic-ui');
+    const { dev, prod } = missingPackages(lock.designSystem);
     if (dev.length || prod.length)
       console.log(
         `하네스가 쓰는데 프로젝트에 없는 패키지 (적용 뒤 설치해요):\n${[dev.length && `  npm i -D ${dev.join(' ')}`, prod.length && `  npm i ${prod.join(' ')}`].filter(Boolean).join('\n')}`,

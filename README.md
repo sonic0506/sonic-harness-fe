@@ -72,12 +72,13 @@ Claude Code에서 한 번만 실행해요.
 /sonic-harness:init
 ```
 
-init은 다음을 처리해요.
+init은 시작 전에 무엇을 할지 보여 주고, "디자인 시스템(sonic-ui)을 쓰나요? (Y/N)"를 함께 물어요. 그다음 이렇게 처리해요.
 
 1. 원본 최신 규칙을 `.sonic-harness/`에 받고, 없는 템플릿 파일만 복사해요.
 2. tsconfig에 `.sonic-harness/tsconfig.strict.json`을 연결하고, 패키지와 npm scripts를 설치해요.
 3. Vite는 `App.tsx`를 `src/app/`으로 옮기고, Next.js는 라우팅 파일을 루트 `app/`으로 옮겨요.
-4. `npm run lint`, `npm run typecheck`가 통과하는지 확인해요.
+4. Y면 sonic-ui를 설치하고 연결해요([sonic-ui와 함께 쓰기](#sonic-ui와-함께-쓰기)).
+5. `npm run lint`, `npm run typecheck`가 통과하는지 확인해요.
 
 > [!NOTE]
 > hook은 새 세션부터 확실히 적용돼요. init 뒤에는 Claude Code를 다시 열어 주세요.
@@ -90,7 +91,7 @@ my-app/
 │  ├─ harness.md
 │  ├─ eslint.base.mjs, prettier.base.mjs, commitlint.base.mjs
 │  ├─ tsconfig.strict.json
-│  └─ lock.json           받은 버전과 파일별 해시
+│  └─ lock.json           받은 버전, 파일별 해시, designSystem(sonic-ui 사용 여부)
 ├─ eslint.config.mjs      프로젝트 소유: base + 이 프로젝트만의 규칙
 ├─ CLAUDE.md              @.sonic-harness/harness.md 를 불러와요
 └─ src/                   app · pages · widgets · features · entities · shared
@@ -117,11 +118,26 @@ my-app/
 
 ### sonic-ui와 함께 쓰기
 
-```bash
-npm i @xonic0506/sonic-ui
+init에서 디자인 시스템을 **Y**로 고르면 [sonic-ui README](https://github.com/sonic0506/sonic-ui#시작하기)의 "시작하기"대로 세팅해요.
+
+| 대상                                                     | 바뀌는 것                                                                                                                                                                                                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `package.json`                                           | `@xonic0506/sonic-ui`, `lucide-react`, `@fontsource/ibm-plex-sans-kr`, `@fontsource/ibm-plex-mono`를 latest로 설치해요(`^` 범위). Tailwind가 없으면 `tailwindcss@4`와 `@tailwindcss/postcss`(Next)·`@tailwindcss/vite`(Vite)도 설치하고 연결해요 |
+| `eslint.config.mjs`                                      | `sonicDesign` 주석을 풀어 디자인 lint를 켜요                                                                                                                                                                                                     |
+| `CLAUDE.md`                                              | `@node_modules/@xonic0506/sonic-ui/DESIGN.md`, `AI-RULES.md`를 불러와요. 설치한 버전의 문서라 코드와 규칙의 버전이 같아요                                                                                                                        |
+| 전역 CSS (`app/globals.css`, `src/app/styles/index.css`) | `@layer theme, base, sonic, components, utilities;` → `tailwindcss` → `styles.css` → `tailwind.css` → fontsource 글꼴                                                                                                                            |
+| 앱 루트 (`app/layout.tsx`, `src/app/app.tsx`)            | `bg-canvas font-sans text-default`, `isolate`(Dialog·Toast가 앱 z-index에 가리지 않게)                                                                                                                                                           |
+| `.sonic-harness/lock.json`                               | `designSystem: true`                                                                                                                                                                                                                             |
+
+글꼴은 `next/font` 기본 설정으로 불러오지 않아요. 글꼴 이름이 바뀌어 sonic-ui가 찾지 못해요.
+
+**N**이면 sonic-ui를 설치하지 않고, `CLAUDE.md`에도 sonic-ui 문서를 불러오지 않아요(없는 파일을 불러오지 않게). `lock.json`에는 `designSystem: false`가 남아요. 나중에 켜려면 이렇게 실행해요.
+
+```text
+/sonic-harness:init design
 ```
 
-프로젝트 `eslint.config.mjs`에서 `sonicDesign` 주석 두 줄을 풀면 디자인 lint가 켜져요. `CLAUDE.md`는 init이 이미 sonic-ui 문서까지 불러오게 만들어 둬요.
+`status`는 디자인 시스템 사용 여부를 보여 주고, `update`는 `designSystem: true`인데 sonic-ui가 없으면 설치를 안내해요. sonic-ui 버전은 하네스가 고정하지 않아요. `npm update @xonic0506/sonic-ui`로 올려요.
 
 ## 동작 방식
 
@@ -166,12 +182,12 @@ evals/                           Claude 행동 평가 (hook·init 확인, 기준
 <details>
 <summary>평가 스크립트</summary>
 
-| 스크립트                 | 확인하는 것                                                                                    |
-| ------------------------ | ---------------------------------------------------------------------------------------------- |
-| `evals/setup-sandbox.sh` | 평가용 Vite 프로젝트(`sandbox/vite`)를 플러그인 스크립트로 새로 만들어요                       |
-| `evals/hook-check.sh`    | 규칙을 어긴 파일을 hook이 막고, 최종 파일이 lint를 통과하는지 확인해요                         |
-| `evals/init-check.sh`    | 새 Next.js 프로젝트에서 `/sonic-harness:init`만으로 lint·typecheck·build가 통과하는지 확인해요 |
-| `evals/run.sh [작업]`    | 기준 작업 3개를 [`evals/checklist.md`](./evals/checklist.md)로 채점해요                        |
+| 스크립트                                  | 확인하는 것                                                                                                            |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `evals/setup-sandbox.sh`                  | 평가용 Vite 프로젝트(`sandbox/vite`)를 플러그인 스크립트로 새로 만들어요                                               |
+| `evals/hook-check.sh`                     | 규칙을 어긴 파일을 hook이 막고, 최종 파일이 lint를 통과하는지 확인해요                                                 |
+| `evals/init-check.sh [next\|vite] [y\|n]` | 새 Next.js·Vite 프로젝트에서 `/sonic-harness:init`(디자인 시스템 Y·N)만으로 lint·typecheck·build가 통과하는지 확인해요 |
+| `evals/run.sh [작업]`                     | 기준 작업 3개를 [`evals/checklist.md`](./evals/checklist.md)로 채점해요                                                |
 
 평가는 개인 전역 설정 없이 이 저장소의 플러그인만 얹어서 실행해요.
 

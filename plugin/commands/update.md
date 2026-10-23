@@ -18,6 +18,7 @@ allowed-tools: Bash(node:*), Bash(npm:*), Read, Edit, Write
    - "원본에서 바뀐 템플릿"은 이렇게 처리해요. **갱신**은 스크립트가 이미 새 원본으로 바꿨어요. **합치기 필요**는 적용 출력의 diff를 그 프로젝트 파일에 반영해요(프로젝트에서 고친 부분은 남겨요). 바꾼 내용을 보여 준 뒤 `harness.mjs template-merged <경로>`를 실행해요. 손으로 최소한만 고치지 말고 diff에 있는 변경을 모두 반영해요.
    - 계획에 "프로젝트에 없는 패키지"가 있으면 적용 뒤 그 명령(`npm i -D …`, `npm i …`)을 그대로 실행해요. 새 규칙이 쓰는 ESLint 플러그인이라 설치하지 않으면 lint가 깨져요.
    - 계획에 "새 템플릿"이 있으면 무엇을 하는 파일인지 한 줄씩 설명하고, **어떤 것을 추가할지 물어요**. 고른 것만 `harness.mjs add-templates <경로...>`로 복사해요. `(필수: …가 불러와요)`가 붙은 새 템플릿은 바뀐 템플릿이 import하는 파일이라 빼면 빌드가 깨져요. 그렇다고 알리고 함께 추가하길 권해요. 고르지 않은 템플릿은 다음 update에서 다시 묻지 않아요.
+   - 바뀐 `CLAUDE.md` 템플릿을 합칠 때 `lock.json`의 `designSystem`이 `false`면 `@node_modules/@xonic0506/sonic-ui/…` 두 줄은 넣지 않아요(true면 남겨요).
    - `.husky/pre-commit`이나 `lint-staged.config.mjs`를 추가했으면 `npm i -D lint-staged@17`을 실행해요. `.github/workflows/ci.yml`을 추가했으면 `package.json`에 `build` 스크립트가 있는지 확인해요.
 4. 충돌이 없으면 6번으로 가요.
 5. 충돌 파일마다(`.sonic-harness/<파일>`):

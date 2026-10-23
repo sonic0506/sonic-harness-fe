@@ -16,4 +16,5 @@ allowed-tools: Bash(node:*)
 - "PR 진행 중"인 파일은 PR 주소를 알려 주고, PR이 합쳐진 뒤 `/sonic-harness:update`로 받으면 정리된다고 안내해요. contribute를 다시 권하지 않아요.
 - 참고: 고친 하네스 파일은 update 때 덮어쓰지 않아요. 원본도 바뀌었으면 합치기를 물어봐요.
 - 합치는 중인 파일이 있으면 `/sonic-harness:update`를 다시 실행해 마무리하라고 알려요.
+- 디자인 시스템이 "사용 안 함"이면 켜는 법(`/sonic-harness:init design`)을 한 줄로 알려요. 묻지는 않아요.
 - 하네스가 없다는 에러면 `/sonic-harness:init`을 권해요.
