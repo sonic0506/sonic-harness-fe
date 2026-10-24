@@ -2,6 +2,7 @@
 
 새 항목은 맨 위에 써요. `/sonic-harness:update`가 이 기록과 git 로그로 무엇이 바뀌었는지 보여 줘요.
 
+- 2026-10-24: frontend-design 훅(`plugin/hooks/frontend-design-gate.mjs`). 화면 디자인(`figma-generate-design` 스킬) 전에는 frontend-design을 먼저 부르게 하고, frontend-design을 쓴 세션에서는 `src/` 편집을 막고, `src/`를 고친 세션에서는 frontend-design을 막아요. 디자인과 코딩은 세션을 나눠요(sonic-ui DESIGN.md §9). sonic-ui 저장소 `scripts/hooks/`와 같은 파일이에요 (0.8.0)
 - 2026-10-23: init이 디자인 시스템(sonic-ui)을 쓸지 Y/N으로 물어요. Y면 sonic-ui·lucide-react·fontsource 설치(Tailwind가 없으면 Tailwind v4도), sonicDesign lint, CSS(layer 순서·styles.css·tailwind.css·글꼴), 앱 루트 `isolate`, CLAUDE.md의 DESIGN.md·AI-RULES.md까지 연결하고, N이면 설치하지 않고 CLAUDE.md에서 sonic-ui 두 줄을 빼요. 고른 값은 `lock.json`의 `designSystem`. 나중에 켜기는 `/sonic-harness:init design`. 예전 lock은 update가 sonic-ui 설치 여부로 채워요. 글꼴은 `@fontsource/ibm-plex-sans`가 아니라 한글이 있는 `@fontsource/ibm-plex-sans-kr`(sonic-ui가 "IBM Plex Sans KR"을 찾아요)
 - 2026-10-21: init이 sonic-ui 연결(설치, Tailwind v4, 전역 CSS layer·fontsource 글꼴, 앱 루트 클래스, sonicDesign lint)까지 해요. Next `prepare`는 `husky && next typegen`(CI에서 이미지 import 타입이 없어 lint·typecheck가 실패하던 문제) (0.6.4)
 - 2026-10-21: slice 바로 아래는 `index.ts`만, 페이지 컴포넌트도 `ui/`에(예시·lint 샘플·eval sandbox 경로). Next 규칙 보강(sonic-ui-site에서 막힌 곳): 루트 `pages/` 때문에 `usePathname` 등이 `null`일 수 있음, Zustand `persist`는 `skipHydration` + `rehydrate()`, 11절 "라우트 파일"(동적 라우트 `generateStaticParams` 다시 내보내기, `app/not-found.tsx` 필수, `error.tsx`의 `'use client'` 예외, CI용 `prepare`에 `next typegen`). CI 템플릿 actions v4→v7(Node 20 deprecated)
