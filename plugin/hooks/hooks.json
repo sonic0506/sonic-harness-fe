@@ -11,6 +11,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/frontend-design-gate.mjs\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [
