@@ -24,6 +24,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -68,7 +69,7 @@ const DEV_DEPS = [
   '@testing-library/react',
   '@testing-library/jest-dom',
   '@testing-library/user-event',
-  'msw',
+  'msw@3', // 모노레포에서 다른 앱의 msw@2가 루트로 올라가 있으면 그걸 재사용해서 v3 API(onUnhandledFrame)가 깨져요
   '@playwright/test',
   '@types/node@24',
 ];
@@ -92,10 +93,26 @@ const DESIGN_DEPS = [
   '@fontsource/ibm-plex-sans-kr',
   '@fontsource/ibm-plex-mono',
 ];
-const DESIGN_DOCS = [
-  '@node_modules/@xonic0506/sonic-ui/DESIGN.md',
-  '@node_modules/@xonic0506/sonic-ui/AI-RULES.md',
-];
+const DESIGN_DOC_NAMES = ['DESIGN.md', 'AI-RULES.md'];
+// CLAUDE.md에서 sonic-ui 문서를 불러오는 줄(@node_modules/… 또는 모노레포의 @../../node_modules/…)
+const isDesignDocLine = (line) =>
+  /^@(\.\.\/)*node_modules\/@xonic0506\/sonic-ui\/(DESIGN|AI-RULES)\.md$/.test(
+    line.trim(),
+  );
+// npm workspaces에서는 sonic-ui가 저장소 루트 node_modules에만 있어서, 실제로 설치된 곳을 위로 올라가며 찾아요.
+function designDocs() {
+  for (let dir = PROJECT, up = ''; ; up += '../') {
+    if (existsSync(join(dir, 'node_modules/@xonic0506/sonic-ui/package.json')))
+      return DESIGN_DOC_NAMES.map(
+        (f) => `@${up}node_modules/@xonic0506/sonic-ui/${f}`,
+      );
+    if (dirname(dir) === dir)
+      return DESIGN_DOC_NAMES.map(
+        (f) => `@node_modules/@xonic0506/sonic-ui/${f}`,
+      );
+    dir = dirname(dir);
+  }
+}
 const depsFor = (kind, designSystem = false) => ({
   dev: [...DEV_DEPS, ...KIND_DEPS[kind].dev],
   prod: [
@@ -108,6 +125,27 @@ const hasPackage = (name) => {
   const pkg = JSON.parse(read(join(PROJECT, 'package.json')) ?? '{}');
   return name in { ...pkg.dependencies, ...pkg.devDependencies };
 };
+
+// git hook과 CI는 저장소에 하나라서, 모노레포 앱(저장소 루트가 아닌 폴더)에는 두지 않고 루트에 둬요.
+// lint-staged.config.mjs는 앱에 둬요(lint-staged가 파일마다 가장 가까운 설정을 써요).
+const isRootOnly = (p) =>
+  p.startsWith('.husky/') ||
+  p.startsWith('.github/') ||
+  p === 'commitlint.config.mjs';
+const ROOT_ONLY_NOTE =
+  '  git 저장소 루트가 아니에요(모노레포 앱). .husky/, commitlint.config.mjs, .github/는 저장소 루트에 두세요:\n' +
+  '    루트 package.json에 husky·@commitlint/cli·lint-staged와 scripts.prepare=husky,\n' +
+  '    .husky/pre-commit은 npx lint-staged, commit-msg는 npx --no -- commitlint --edit "$1",\n' +
+  '    CI는 루트에서 npm ci 뒤 이 앱 폴더에서 lint·typecheck·test를 돌려요.';
+// null: git 저장소가 아님, true: 저장소 루트, false: 저장소 안의 하위 폴더(모노레포 앱)
+function isGitRoot() {
+  const r = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+    cwd: PROJECT,
+    encoding: 'utf8',
+  });
+  if (r.status !== 0) return null;
+  return realpathSync(r.stdout.trim()) === realpathSync(PROJECT);
+}
 
 // ---------- 작은 도구 ----------
 const git = (...args) =>
@@ -259,8 +297,10 @@ const commands = {
     }
     const copied = [];
     const skipped = [];
+    const monorepoApp = isGitRoot() === false;
     for (const [f, src] of templatesAt(ref, kind)) {
       const dest = join(PROJECT, f);
+      if (monorepoApp && isRootOnly(f)) continue;
       if (existsSync(dest)) {
         skipped.push(f);
         continue;
@@ -275,7 +315,7 @@ const commands = {
         claudePath,
         read(claudePath)
           .split('\n')
-          .filter((line) => !DESIGN_DOCS.includes(line.trim()))
+          .filter((line) => !isDesignDocLine(line))
           .join('\n'),
       );
     }
@@ -326,10 +366,19 @@ const commands = {
     console.log(`  .sonic-harness/: ${Object.keys(files).join(', ')}`);
     console.log(`  복사한 템플릿: ${copied.join(', ') || '없음'}`);
     console.log(`  이미 있어서 건너뛴 템플릿: ${skipped.join(', ') || '없음'}`);
+    if (monorepoApp) console.log(ROOT_ONLY_NOTE);
   },
 
   deps() {
     const kind = projectKind();
+    const gitRoot = isGitRoot();
+    // 모노레포 앱이면 husky는 루트 prepare가 맡아요.
+    const prepare = [
+      gitRoot !== false && 'husky',
+      kind === 'next' && 'next typegen',
+    ]
+      .filter(Boolean)
+      .join(' && ');
     const npm = (...args) => {
       const r = spawnSync('npm', args, { cwd: PROJECT, stdio: 'inherit' });
       if (r.status !== 0) fail(`npm ${args.join(' ')} 실패`);
@@ -350,10 +399,10 @@ const commands = {
       'scripts.test=vitest run',
       'scripts.e2e=playwright test',
       // Next: 이미지 import 타입이 next-env.d.ts(.gitignore)에 있어서, npm ci 때 만들어야 CI의 lint·typecheck가 통과해요.
-      `scripts.prepare=${kind === 'vite' ? 'husky' : 'husky && next typegen'}`,
+      ...(prepare ? [`scripts.prepare=${prepare}`] : []),
     );
-    if (existsSync(join(PROJECT, '.git')))
-      spawnSync('npx', ['husky'], { cwd: PROJECT, stdio: 'ignore' });
+    if (gitRoot) spawnSync('npx', ['husky'], { cwd: PROJECT, stdio: 'ignore' });
+    else if (gitRoot === false) console.log(ROOT_ONLY_NOTE);
     else
       console.log(
         '  git 저장소가 아니라 husky는 건너뛰었어요. git init 후 npx husky를 실행하세요.',
@@ -405,7 +454,7 @@ const commands = {
       );
     const claudePath = join(PROJECT, 'CLAUDE.md');
     const claude = read(claudePath) ?? '';
-    const missingDocs = DESIGN_DOCS.filter((d) => !claude.includes(d));
+    const missingDocs = designDocs().filter((d) => !claude.includes(d));
     if (missingDocs.length && claude.includes('@.sonic-harness/harness.md'))
       writeFileSync(
         claudePath,
