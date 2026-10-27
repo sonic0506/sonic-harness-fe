@@ -4,6 +4,7 @@
   "description": "",
   "scripts": {
     "test:lint": "node tests/lint-samples/run.mjs",
+    "test:hooks": "bash tests/hooks/run.sh",
     "lint": "eslint .",
     "format": "prettier --write . && npm run format:templates",
     "format:templates": "prettier --ignore-path /dev/null --config rules/prettier.base.mjs --write \"templates*/**/*.{ts,tsx,mts}\""
