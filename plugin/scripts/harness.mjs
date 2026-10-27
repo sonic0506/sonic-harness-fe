@@ -113,8 +113,20 @@ function designDocs() {
     dir = dirname(dir);
   }
 }
+const depName = (spec) => spec.replace(/(.)@[^@/]+$/, '$1'); // '@a/b@5' → '@a/b', 'typescript@~6.0' → 'typescript'
+// 모노레포 앱이면 git hook 패키지는 루트에 둬요(앱에 설치하거나 없다고 권하지 않아요).
+const ROOT_ONLY_DEPS = [
+  '@commitlint/cli',
+  '@commitlint/config-conventional',
+  'husky',
+  'lint-staged',
+];
+const devDeps = () =>
+  isGitRoot() === false
+    ? DEV_DEPS.filter((spec) => !ROOT_ONLY_DEPS.includes(depName(spec)))
+    : DEV_DEPS;
 const depsFor = (kind, designSystem = false) => ({
-  dev: [...DEV_DEPS, ...KIND_DEPS[kind].dev],
+  dev: [...devDeps(), ...KIND_DEPS[kind].dev],
   prod: [
     ...DEPS,
     ...KIND_DEPS[kind].prod,
@@ -261,8 +273,7 @@ const templatesAt = (ref, kind) => {
 function missingPackages(designSystem) {
   const pkg = JSON.parse(read(join(PROJECT, 'package.json')) ?? '{}');
   const all = { ...pkg.dependencies, ...pkg.devDependencies };
-  const name = (spec) => spec.replace(/(.)@[^@/]+$/, '$1'); // '@a/b@5' → '@a/b', 'typescript@~6.0' → 'typescript'
-  const missing = (list) => list.filter((spec) => !(name(spec) in all));
+  const missing = (list) => list.filter((spec) => !(depName(spec) in all));
   const { dev, prod } = depsFor(projectKind(), designSystem);
   return { dev: missing(dev), prod: missing(prod) };
 }
