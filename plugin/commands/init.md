@@ -23,11 +23,11 @@ allowed-tools: Bash(node:*), Bash(npm:*), Bash(npx:*), Bash(git:*), Bash(ls:*), 
    - tsconfig에 `.sonic-harness/tsconfig.strict.json`을 연결해요.
    - 패키지를 설치하고 npm scripts(lint, typecheck, test, e2e)를 설정해요.
    - Y면 sonic-ui 최신 버전을 설치하고 eslint·CSS·CLAUDE.md까지 연결해요. N이면 설치하지 않고, CLAUDE.md에 sonic-ui 문서를 불러오지 않아요.
-3. `harness.mjs init`을 실행해요. 출력의 "건너뛴 템플릿"을 기억해요. 고른 값은 `lock.json`의 `designSystem`에 남아요(init은 `false`로 쓰고, Y면 6번의 `design`이 `true`로 바꿔요).
+3. `harness.mjs init`을 실행해요. 출력의 "건너뛴 템플릿"을 기억해요. 프로젝트가 git 저장소 루트가 아니면(npm workspaces 모노레포의 `apps/web` 같은 앱) `.husky/`, `commitlint.config.mjs`, `.github/`는 복사하지 않고 `deps`도 `scripts.prepare`에 husky를 넣지 않아요(Next는 `next typegen`만). 출력의 안내대로 저장소 루트에 husky·commitlint·CI가 없으면 만들자고 제안해요. `lint-staged.config.mjs`는 앱에 그대로 둬요. 고른 값은 `lock.json`의 `designSystem`에 남아요(init은 `false`로 쓰고, Y면 6번의 `design`이 `true`로 바꿔요).
 4. `harness.mjs deps`를 실행해요(시간이 걸려요).
 5. 직접 손볼 곳을 처리해요. 각각 무엇을 바꾸는지 말하고 진행해요.
    - **건너뛴 템플릿**: 프로젝트에 원래 있던 `eslint.config.*`, `prettier.config.*`, `vitest.config.*` 등이 하네스 템플릿과 다르면 diff를 보여 주고, 하네스 템플릿으로 바꿀지 물어요. 특히 `eslint.config.mjs`는 `./.sonic-harness/eslint.base.mjs`를 불러와야 해요.
-   - 건너뛴 `CLAUDE.md`를 합칠 때 `@.sonic-harness/harness.md`는 넣고, `@node_modules/@xonic0506/sonic-ui/…` 두 줄은 넣지 않아요(Y면 `design`이 넣어요).
+   - 건너뛴 `CLAUDE.md`를 합칠 때 `@.sonic-harness/harness.md`는 넣고, sonic-ui 문서 두 줄(`@…node_modules/@xonic0506/sonic-ui/…`)은 넣지 않아요(Y면 `design`이 넣어요).
    - 다른 lint 도구(예: Vite 템플릿의 oxlint, `.oxlintrc.json`)가 있으면 제거를 제안해요.
    - **Vite**: `vite.config.ts`에 `resolve: { tsconfigPaths: true }`를 넣어요. `src/App.tsx`·`src/App.css`·`src/index.css`가 있으면 `src/app/app.tsx`(이름 있는 export `App`, `AppProviders`로 감싸기)와 `src/app/styles/`로 옮기고, `src/main.tsx`는 `@/app/app`만 불러요. `src/assets`는 `src/shared/assets`로 옮겨요. `main.tsx`도 하네스 규칙을 따라요: `document.getElementById('root')!` 대신 없으면 에러를 던지고, `import.meta.env` 대신 `@/shared/config`의 `env`를 써요. 개발 화면 MSW: `main.tsx`에서 `env.DEV`일 때 `@/app/mocks/browser`의 `worker.start({ onUnhandledFrame: 'bypass' })` 뒤에 렌더해요.
    - **Next.js**: `src/app/`에 라우팅 파일(`layout.tsx`, `page.tsx`, `globals.css`, `favicon.ico` 등)이 있으면 루트 `app/`으로 옮겨요(`src/app`은 FSD app 레이어). `app/layout.tsx`는 `@/app/providers`의 `AppProviders`로 감싸고, `app/page.tsx`는 `src/pages/<도메인>`을 다시 내보내기만 해요. 옮긴 뒤 `.next/`에 옛 경로 타입이 남아 typecheck가 실패하면 `npx next build`를 한 번 실행해 다시 만들어요.
@@ -44,7 +44,7 @@ allowed-tools: Bash(node:*), Bash(npm:*), Bash(npx:*), Bash(git:*), Bash(ls:*), 
 
 기준은 sonic-ui README의 "시작하기"예요(설치 뒤 `node_modules/@xonic0506/sonic-ui/README.md`).
 
-1. 라우팅 파일을 옮긴 뒤에 `harness.mjs design`을 실행해요. sonic-ui, `lucide-react`, 글꼴(`@fontsource/ibm-plex-sans-kr`, `@fontsource/ibm-plex-mono`)을 latest로 설치하고(`package.json`에는 `^` 범위), Tailwind가 없으면 `tailwindcss`와 Next `@tailwindcss/postcss`·Vite `@tailwindcss/vite`를 설치하고, `eslint.config.mjs`의 sonicDesign 주석을 풀고, `CLAUDE.md`의 `@.sonic-harness/harness.md` 아래에 `@node_modules/@xonic0506/sonic-ui/DESIGN.md`·`AI-RULES.md`를 넣고, `lock.json`에 `designSystem: true`를 기록해요. 출력의 "직접 할 일"이 있으면 처리해요.
+1. 라우팅 파일을 옮긴 뒤에 `harness.mjs design`을 실행해요. sonic-ui, `lucide-react`, 글꼴(`@fontsource/ibm-plex-sans-kr`, `@fontsource/ibm-plex-mono`)을 latest로 설치하고(`package.json`에는 `^` 범위), Tailwind가 없으면 `tailwindcss`와 Next `@tailwindcss/postcss`·Vite `@tailwindcss/vite`를 설치하고, `eslint.config.mjs`의 sonicDesign 주석을 풀고, `CLAUDE.md`의 `@.sonic-harness/harness.md` 아래에 `@node_modules/@xonic0506/sonic-ui/DESIGN.md`·`AI-RULES.md`를 넣고(모노레포라 패키지가 루트 `node_modules`에 있으면 `@../../node_modules/…`처럼 실제 위치의 상대 경로로 넣어요), `lock.json`에 `designSystem: true`를 기록해요. 출력의 "직접 할 일"이 있으면 처리해요.
    - Tailwind를 새로 설치했으면 연결해요. Next는 루트 `postcss.config.mjs`(`export default { plugins: { '@tailwindcss/postcss': {} } };`), Vite는 `vite.config.ts`의 `plugins`에 `tailwindcss()`(`@tailwindcss/vite`)예요.
 2. 전역 CSS(Next `app/globals.css`, Vite `src/app/styles/index.css`) 맨 위에 넣어요.
    ```css
